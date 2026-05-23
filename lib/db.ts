@@ -89,9 +89,43 @@ export type ChatRow = {
   is_group: boolean;
 };
 
+/**
+ * Return the set of chat_jid aliases for a DM. WhatsApp's ongoing LID rollout
+ * splits a single DM across `<phone>@s.whatsapp.net` and `<lid>@lid`; we look
+ * them up via whatsmeow_lid_map and return both so queries see the merged view.
+ * Group jids (@g.us) and unrecognized jids return as-is.
+ */
+export function aliasesForChatJid(jid: string): string[] {
+  if (!jid.endsWith("@s.whatsapp.net") && !jid.endsWith("@lid")) return [jid];
+  const bare = jid.replace(/@.*/, "");
+  try {
+    if (jid.endsWith("@lid")) {
+      const row = whatsappDb()
+        .prepare("SELECT pn FROM whatsmeow_lid_map WHERE lid = ?")
+        .get(bare) as { pn?: string } | undefined;
+      if (row?.pn) return [jid, `${row.pn}@s.whatsapp.net`];
+    } else {
+      const row = whatsappDb()
+        .prepare("SELECT lid FROM whatsmeow_lid_map WHERE pn = ?")
+        .get(bare) as { lid?: string } | undefined;
+      if (row?.lid) return [jid, `${row.lid}@lid`];
+    }
+  } catch {
+    /* ignore */
+  }
+  return [jid];
+}
+
+/** Pick the canonical jid for a DM — prefer the phone-number form. */
+function canonicalJid(jid: string): string {
+  const aliases = aliasesForChatJid(jid);
+  return aliases.find((j) => j.endsWith("@s.whatsapp.net")) ?? aliases[0];
+}
+
 export function listChats(limit = 50): ChatRow[] {
-  // Use MAX(timestamp) FROM messages for real last activity (chats.last_message_time can be stale).
-  const rows = messagesDb()
+  // Pull more than `limit` so we have headroom to merge LID/PN duplicates without
+  // running short. Use MAX(timestamp) FROM messages for real last activity.
+  const raw = messagesDb()
     .prepare(
       `SELECT c.jid, c.name, COALESCE(m.last_ts, c.last_message_time) AS last_message_time, COALESCE(m.cnt, 0) AS message_count
        FROM chats c
@@ -102,8 +136,35 @@ export function listChats(limit = 50): ChatRow[] {
        ORDER BY last_message_time DESC
        LIMIT ?`
     )
-    .all(limit) as Array<{ jid: string; name: string | null; last_message_time: string | null; message_count: number }>;
-  return rows.map((r) => ({ ...r, is_group: r.jid.endsWith("@g.us") }));
+    .all(limit * 2) as Array<{ jid: string; name: string | null; last_message_time: string | null; message_count: number }>;
+
+  // Merge LID/PN duplicates: group by canonical jid, sum message counts, take
+  // the most recent last_message_time, prefer a non-numeric chat name.
+  const byCanonical = new Map<string, { jid: string; name: string | null; last_message_time: string | null; message_count: number }>();
+  for (const r of raw) {
+    const key = canonicalJid(r.jid);
+    const existing = byCanonical.get(key);
+    if (!existing) {
+      byCanonical.set(key, { jid: key, name: r.name, last_message_time: r.last_message_time, message_count: r.message_count });
+    } else {
+      existing.message_count += r.message_count;
+      if (
+        r.last_message_time &&
+        (!existing.last_message_time || r.last_message_time > existing.last_message_time)
+      ) {
+        existing.last_message_time = r.last_message_time;
+      }
+      // Prefer a name that's not just the raw jid number (e.g. "Rachel Cheng" over "216951817253089")
+      const looksNumeric = (s: string | null) => !s || /^[0-9]+$/.test(s);
+      if (looksNumeric(existing.name) && !looksNumeric(r.name)) existing.name = r.name;
+    }
+  }
+
+  return Array.from(byCanonical.values())
+    .filter((r) => r.last_message_time !== null)
+    .sort((a, b) => (a.last_message_time! < b.last_message_time! ? 1 : -1))
+    .slice(0, limit)
+    .map((r) => ({ ...r, is_group: r.jid.endsWith("@g.us") }));
 }
 
 export type Reaction = { reactor: string; reactor_name: string; emoji: string; timestamp: string };
@@ -125,12 +186,15 @@ export type MessageRow = {
 };
 
 export function listMessages(chatJid: string, limit = 200): MessageRow[] {
+  // Pull from every alias (LID + PN) of this DM so the conversation reads as one.
+  const aliases = aliasesForChatJid(chatJid);
+  const placeholders = aliases.map(() => "?").join(",");
   const raw = messagesDb()
     .prepare(
       `SELECT id, chat_jid, sender, content, timestamp, is_from_me, media_type, filename, quoted_message_id
-       FROM messages WHERE chat_jid = ? ORDER BY timestamp DESC LIMIT ?`
+       FROM messages WHERE chat_jid IN (${placeholders}) ORDER BY timestamp DESC LIMIT ?`
     )
-    .all(chatJid, limit) as Array<Omit<MessageRow, "sender_name" | "quoted_preview" | "quoted_sender_name" | "reactions">>;
+    .all(...aliases, limit) as Array<Omit<MessageRow, "sender_name" | "quoted_preview" | "quoted_sender_name" | "reactions">>;
 
   // Bulk-fetch reactions (match by target_id only; chat_jid can diverge across LID/PN rollout)
   const ids = raw.map((r) => r.id);

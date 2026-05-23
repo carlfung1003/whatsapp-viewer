@@ -1,4 +1,4 @@
-import { listMessages, detectDrops, listChats } from "@/lib/db";
+import { listMessages, detectDrops, listChats, aliasesForChatJid } from "@/lib/db";
 import { MessageList, DropsBanner } from "@/components/Messages";
 import ChatSummary from "@/components/ChatSummary";
 import { notFound } from "next/navigation";
@@ -9,8 +9,10 @@ export default async function ChatPage({ params }: { params: Promise<{ jid: stri
   const { jid: rawJid } = await params;
   const jid = decodeURIComponent(rawJid);
 
+  // Accept either alias for a DM — find by canonical-or-alias match
+  const aliasSet = new Set(aliasesForChatJid(jid));
   const allChats = listChats(500);
-  const chat = allChats.find((c) => c.jid === jid);
+  const chat = allChats.find((c) => aliasSet.has(c.jid));
   if (!chat) notFound();
 
   const messages = listMessages(jid, 200);
