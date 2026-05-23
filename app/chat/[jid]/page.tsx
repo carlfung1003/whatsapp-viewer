@@ -32,9 +32,8 @@ export default async function ChatPage({ params }: { params: Promise<{ jid: stri
         </div>
       </header>
 
-      <DropsBanner drops={drops} messages={messages} chatJid={jid} />
-
       <div className="flex-1 overflow-y-auto">
+        <DropsBanner drops={drops} messages={messages} chatJid={jid} />
         <MessageList messages={messages} />
       </div>
     </div>
