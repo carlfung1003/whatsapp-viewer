@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Usage = {
   input_tokens: number;
@@ -26,11 +26,45 @@ const QUICK_PROMPTS = [
 
 const DEFAULT_PROMPT = "";
 
+const LOADING_MESSAGES = [
+  "Reading the chat…",
+  "AI working hard…",
+  "Looking for patterns…",
+  "Sorting through reactions…",
+  "Resolving who said what…",
+  "Picking out what matters…",
+  "Writing it up…",
+  "Almost there…",
+];
+
+function useRotatingMessage(active: boolean, intervalMs = 1800) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    setI(0);
+    const id = setInterval(() => setI((n) => (n + 1) % LOADING_MESSAGES.length), intervalMs);
+    return () => clearInterval(id);
+  }, [active, intervalMs]);
+  return LOADING_MESSAGES[i];
+}
+
 export default function ChatSummary({ chatJid }: { chatJid: string }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState(DEFAULT_PROMPT);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const rotatingMsg = useRotatingMessage(loading);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 100) / 10), 200);
+    return () => clearInterval(id);
+  }, [loading]);
 
   async function run(q: string) {
     setLoading(true);
@@ -121,6 +155,16 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
         </button>
       </div>
 
+      {loading && (
+        <div className="mt-3 flex items-center gap-3 p-3 rounded border border-emerald-900/60 bg-emerald-950/20">
+          <div className="relative">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute inset-0" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 relative" />
+          </div>
+          <div className="text-sm text-emerald-200 flex-1">{rotatingMsg}</div>
+          <div className="text-[10px] text-zinc-500 font-mono tabular-nums">{elapsed.toFixed(1)}s</div>
+        </div>
+      )}
       {result?.error && (
         <div className="mt-3 p-3 text-sm text-red-300 bg-red-950/20 rounded border border-red-900 font-mono whitespace-pre-wrap">
           {result.error}
