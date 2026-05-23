@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MessageRow, Drop } from "@/lib/db";
+
+const ORDER_KEY = "whatsapp-viewer.message-order";
 
 function shortTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -148,28 +150,64 @@ export function ImageTile({
 
 export function MessageList({ messages }: { messages: MessageRow[] }) {
   const [q, setQ] = useState("");
+  const [newestFirst, setNewestFirst] = useState(true);
+
+  // Restore order preference once on mount
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(ORDER_KEY);
+      if (v === "oldest") setNewestFirst(false);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleOrder() {
+    setNewestFirst((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(ORDER_KEY, next ? "newest" : "oldest");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return messages;
-    return messages.filter((m) => {
-      if (m.content && m.content.toLowerCase().includes(needle)) return true;
-      if (m.sender_name.toLowerCase().includes(needle)) return true;
-      if (m.media_type && m.media_type.toLowerCase().includes(needle)) return true;
-      return false;
-    });
-  }, [q, messages]);
+    const matched = !needle
+      ? messages
+      : messages.filter((m) => {
+          if (m.content && m.content.toLowerCase().includes(needle)) return true;
+          if (m.sender_name.toLowerCase().includes(needle)) return true;
+          if (m.media_type && m.media_type.toLowerCase().includes(needle)) return true;
+          return false;
+        });
+    // `messages` arrives chronological ascending (oldest first). Reverse if showing newest first.
+    return newestFirst ? [...matched].reverse() : matched;
+  }, [q, messages, newestFirst]);
 
   return (
     <div className="flex flex-col">
       <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800 px-4 py-2">
-        <input
-          type="search"
-          placeholder="Search in this chat…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-zinc-600"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="search"
+            placeholder="Search in this chat…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-zinc-600"
+          />
+          <button
+            type="button"
+            onClick={toggleOrder}
+            title={newestFirst ? "Showing newest first — click for chronological" : "Showing oldest first — click for newest first"}
+            className="shrink-0 text-xs px-2 py-1 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
+          >
+            {newestFirst ? "↓ Newest" : "↑ Oldest"}
+          </button>
+        </div>
         {q && (
           <div className="mt-1 text-[10px] text-zinc-500">
             {filtered.length} of {messages.length} match
