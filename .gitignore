@@ -41,6 +41,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # runtime logs (may contain message content)
 *.log
 viewer.log
