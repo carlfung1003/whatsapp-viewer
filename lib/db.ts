@@ -297,22 +297,27 @@ function detectDropsLite(items: DropSeed[], minSize: number, windowMs: number): 
 
 // --- Stats queries for /stats dashboard ---
 
-function sinceClause(days: number): string {
-  return new Date(Date.now() - days * 86_400_000).toISOString();
+// Stored timestamps look like '2026-05-22 17:06:00-07:00' (Go's RFC3339-with-space
+// + TZ offset). A naive JS-produced ISO cutoff is 'T'-separated UTC, which makes
+// SQLite's default text comparison wrong on same-day rows. We wrap both sides in
+// SQLite's datetime() so the comparison happens on parsed datetimes (normalized
+// to UTC), then bind the window as a '-N days' modifier so the database controls
+// the format on both sides.
+function sinceModifier(days: number): string {
+  return `-${days} days`;
 }
 
 export type TopChat = { name: string; jid: string; msgs: number; is_group: boolean };
 
 export function topChats(days = 30, limit = 10): TopChat[] {
-  const since = sinceClause(days);
   const rows = messagesDb()
     .prepare(
       `SELECT c.jid, c.name, COUNT(*) AS msgs
        FROM messages m JOIN chats c ON c.jid = m.chat_jid
-       WHERE m.timestamp > ?
+       WHERE datetime(m.timestamp) > datetime('now', ?)
        GROUP BY c.jid ORDER BY msgs DESC LIMIT ?`
     )
-    .all(since, limit) as Array<{ jid: string; name: string | null; msgs: number }>;
+    .all(sinceModifier(days), limit) as Array<{ jid: string; name: string | null; msgs: number }>;
   return rows.map((r) => ({
     name: r.name ?? r.jid,
     jid: r.jid,
@@ -324,58 +329,54 @@ export function topChats(days = 30, limit = 10): TopChat[] {
 export type MediaBreakdown = { type: string; count: number };
 
 export function mediaBreakdown(days = 30): MediaBreakdown[] {
-  const since = sinceClause(days);
   const rows = messagesDb()
     .prepare(
       `SELECT COALESCE(media_type, 'text') AS type, COUNT(*) AS count
-       FROM messages WHERE timestamp > ?
+       FROM messages WHERE datetime(timestamp) > datetime('now', ?)
        GROUP BY type ORDER BY count DESC`
     )
-    .all(since) as Array<{ type: string; count: number }>;
+    .all(sinceModifier(days)) as Array<{ type: string; count: number }>;
   return rows;
 }
 
 export type EmojiCount = { emoji: string; count: number };
 
 export function topEmojis(days = 30, limit = 12): EmojiCount[] {
-  const since = sinceClause(days);
   const rows = messagesDb()
     .prepare(
       `SELECT emoji, COUNT(*) AS count
-       FROM reactions WHERE timestamp > ?
+       FROM reactions WHERE datetime(timestamp) > datetime('now', ?)
        GROUP BY emoji ORDER BY count DESC LIMIT ?`
     )
-    .all(since, limit) as Array<{ emoji: string; count: number }>;
+    .all(sinceModifier(days), limit) as Array<{ emoji: string; count: number }>;
   return rows;
 }
 
 export type HeatmapCell = { dow: number; hour: number; count: number };
 
 export function activityHeatmap(days = 30): HeatmapCell[] {
-  const since = sinceClause(days);
   const rows = messagesDb()
     .prepare(
       `SELECT CAST(strftime('%w', timestamp, 'localtime') AS INT) AS dow,
               CAST(strftime('%H', timestamp, 'localtime') AS INT) AS hour,
               COUNT(*) AS count
-       FROM messages WHERE timestamp > ?
+       FROM messages WHERE datetime(timestamp) > datetime('now', ?)
        GROUP BY dow, hour`
     )
-    .all(since) as Array<{ dow: number; hour: number; count: number }>;
+    .all(sinceModifier(days)) as Array<{ dow: number; hour: number; count: number }>;
   return rows;
 }
 
 export type DailyCount = { date: string; count: number };
 
 export function messagesPerDay(days = 30): DailyCount[] {
-  const since = sinceClause(days);
   const rows = messagesDb()
     .prepare(
       `SELECT date(timestamp, 'localtime') AS date, COUNT(*) AS count
-       FROM messages WHERE timestamp > ?
+       FROM messages WHERE datetime(timestamp) > datetime('now', ?)
        GROUP BY date ORDER BY date ASC`
     )
-    .all(since) as DailyCount[];
+    .all(sinceModifier(days)) as DailyCount[];
   return rows;
 }
 
@@ -396,9 +397,9 @@ export function overviewTotals(): OverviewTotals {
     total_images: (m.prepare("SELECT COUNT(*) AS n FROM messages WHERE media_type='image'").get() as { n: number }).n,
     total_active_chats_7d: (m
       .prepare(
-        "SELECT COUNT(DISTINCT chat_jid) AS n FROM messages WHERE timestamp > ?"
+        "SELECT COUNT(DISTINCT chat_jid) AS n FROM messages WHERE datetime(timestamp) > datetime('now', ?)"
       )
-      .get(sinceClause(7)) as { n: number }).n,
+      .get(sinceModifier(7)) as { n: number }).n,
   };
 }
 
@@ -414,17 +415,16 @@ export type CrossChatDrop = Drop & {
  * sorted by start time DESC. Used by the cross-chat dashboard.
  */
 export function listDropsAcrossChats(days = 7, minSize = 5, windowMs = 5 * 60_000): CrossChatDrop[] {
-  const since = new Date(Date.now() - days * 86_400_000).toISOString();
-
-  // Pull image messages from the window, grouped by chat, ordered by timestamp ASC
+  // Pull image messages from the window, grouped by chat, ordered by timestamp ASC.
+  // See sinceModifier() above for why this uses datetime() on both sides.
   const imgRows = messagesDb()
     .prepare(
       `SELECT id, chat_jid, sender, timestamp, media_type
        FROM messages
-       WHERE media_type = 'image' AND timestamp > ?
+       WHERE media_type = 'image' AND datetime(timestamp) > datetime('now', ?)
        ORDER BY chat_jid, timestamp ASC`
     )
-    .all(since) as Array<{ id: string; chat_jid: string; sender: string; timestamp: string; media_type: string }>;
+    .all(sinceModifier(days)) as Array<{ id: string; chat_jid: string; sender: string; timestamp: string; media_type: string }>;
 
   // Partition by chat_jid
   const byChat = new Map<string, DropSeed[]>();
