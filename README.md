@@ -1,6 +1,13 @@
 # whatsapp-viewer
 
-A local-only web dashboard for your personal WhatsApp data, paired with the [lharries/whatsapp-mcp](https://github.com/lharries/whatsapp-mcp) bridge. Sidebar of chats, per-chat view with reactions and quoted replies rendered inline, click-to-load image previews, plus a cross-chat "Image drops" dashboard for tracking auction-style image bursts in business groups.
+A local-only web dashboard for your personal WhatsApp data, paired with the [lharries/whatsapp-mcp](https://github.com/lharries/whatsapp-mcp) bridge.
+
+- **Sidebar + chat detail** with sender names resolved, reactions and quoted replies rendered inline
+- **`/drops`** dashboard for tracking auction-style image bursts across groups (claim rates, quoted replies)
+- **`/stats`** recharts-powered: top chats, daily volume, media types, reaction emojis, activity heatmap
+- **`/sql`** read-only playground with 10 sample queries, ⌘+Enter to run, localStorage history
+- **✨ AI summary** button per chat (Claude Sonnet 4.6 + prompt caching, ~$0.03 cold then ~$0.002 follow-ups)
+- **Click-to-load image previews** with HTTP 410 graceful fallback for CDN-expired media
 
 Built in one evening to scratch a personal itch for a specific use case (tracking which items in a vintage-luxury auction group got claimed) — captures the full stack so anyone with a similar workflow can reproduce it.
 
@@ -166,11 +173,49 @@ Restart Claude Code. `mcp__whatsapp__*` tools will appear in the deferred tool l
 
 ## Features
 
-- **Sidebar** — top chats sorted by real last activity (computed from `MAX(messages.timestamp)`, not the stale `chats.last_message_time`). Client-side search filter. Group/DM tag + message count.
-- **Chat detail** — last 200 messages, sender LIDs resolved to contact names via the bridge's `whatsmeow_lid_map` + `whatsmeow_contacts` tables. Quoted replies show a preview of the message they're quoting. Reactions appear inline next to the timestamp with the reactor's name. In-chat search filter.
-- **Image drops banner** — clusters of ≥5 images from the same sender within 5 minutes get a dedicated grid above the messages. Each tile is click-to-load (saves your model quota — no images are fetched until you ask). Tiles turn green when they have a reaction ("claimed" in auction-style group workflows). Per-drop counts of reactions and quoted-replies make it easy to spot which items generated interest.
-- **Cross-chat /drops dashboard** — every image burst across every chat over the last 1/3/7/14/30 days, sorted by recency. Shows chat name, sender, time range, item count, reactions, quoted replies, and a `%claimed` rate. Click into the source chat for detail.
+### Browsing
+
+- **Sidebar** — top chats sorted by real last activity (computed from `MAX(messages.timestamp)`, not the stale `chats.last_message_time`). Client-side search filter. Group/DM tag + message count. Toggle row at top jumps to `/drops`, `/stats`, `/sql`.
+- **Chat detail** — last 200 messages, sender LIDs resolved to contact names via the bridge's `whatsmeow_lid_map` + `whatsmeow_contacts` tables. Quoted replies show a preview of the message they're quoting. Reactions appear inline next to the timestamp with the reactor's name. **Order toggle** (`↓ Newest` / `↑ Oldest`) flips chronological direction with the preference saved per browser. In-chat search filter.
+- **LID/PN dedup** — WhatsApp's gradual rollout of LID addressing splits a DM into two `chat_jid` rows (one `<phone>@s.whatsapp.net`, one `<lid>@lid`). The sidebar merges these into one row using `whatsmeow_lid_map`, and the chat-detail view pulls messages from both halves. Bookmarks of either URL still resolve correctly.
+
+### Image drops
+
+- **Per-chat drops banner** — clusters of ≥5 images from the same sender within 5 minutes get a dedicated grid above the messages. Each tile is click-to-load (saves your model quota — no images are fetched until you ask). Tiles turn green when they have a reaction ("claimed" in auction-style group workflows). Per-drop counts of reactions and quoted-replies make it easy to spot which items generated interest.
+- **Cross-chat `/drops` dashboard** — every image burst across every chat over the last 1/3/7/14/30 days, sorted by recency. Each card shows chat name, sender, time range, item count, reactions, quoted replies, and a `%claimed` rate. The first 8 thumbnails are shown inline (click to load real bytes), plus a `+N` indicator for the rest.
 - **`/api/media/[chat_jid]/[msg_id]`** — checks the bridge's local cache first, falls back to triggering a fresh download via the bridge's REST endpoint, streams the decrypted bytes with the right Content-Type. Returns HTTP 410 for media WhatsApp has purged from their CDN (everything older than ~30–45 days) so the UI can render a soft "expired" placeholder.
+
+### `/stats` dashboard
+
+[Recharts](https://recharts.org/)-powered visualizations:
+
+- **Top chats by message count** — horizontal bar, top 12 (resolved name).
+- **Messages per day** — line chart over the selected window.
+- **Media-type breakdown** — pie of text vs image/video/audio/document.
+- **Top reaction emojis** — pie of which emojis you and your contacts use most.
+- **Activity heatmap** — day-of-week × hour-of-day grid, intensity = volume, local time.
+- Window selector (7/14/30/60/90/180d) preserved in the URL.
+
+### `/sql` playground
+
+SQL queries direct against the bridge's SQLite, browser-rendered:
+
+- Read-only connection — writes are rejected at the SQL layer + the connection itself.
+- `whatsapp.db` is `ATTACH`ed as `wa` so you can join `whatsmeow_lid_map` / `whatsmeow_contacts` without opening two connections.
+- 10 pre-loaded sample queries (top chats, image bursts, emoji frequency, my-messages-that-got-reactions, quoted-reply chains, activity heatmap, keyword search, media breakdown, LID→name resolution, top senders per chat).
+- ⌘+Enter to run. Hard `LIMIT 1000` auto-applied if you forget. 5-second timeout. localStorage history of your last 20 queries.
+
+### AI chat summary
+
+The chat detail page has an **✨ Summarize** button in the top-right that calls Claude Sonnet 4.6 on the loaded messages:
+
+- **Prompt caching** on the system prompt + the chat transcript so follow-up questions on the same chat hit the cache (~10× cheaper).
+- Quick-prompt chips ("What needs my reply?", "Action items only", etc.) plus a freeform ask box.
+- Rotating loading message + pulse indicator + elapsed-seconds counter while it works.
+- Renders the response inline with usage stats (input/output tokens, cache hits) in the footer.
+- Requires `ANTHROPIC_API_KEY` in `.env.local` — see "Optional: Claude API key" above. Without one, the button gracefully returns "key not set."
+
+Rough pricing on Sonnet 4.6: ~$0.03 cold (first call for a chat, 200-message context) → ~$0.002 each follow-up question within 5 minutes via the cache.
 
 ## Querying the SQLite directly
 
