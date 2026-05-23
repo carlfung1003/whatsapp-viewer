@@ -90,8 +90,7 @@ export async function POST(req: Request) {
     });
 
     const text = completion.content
-      .filter((b): b is { type: "text"; text: string } => b.type === "text")
-      .map((b) => b.text)
+      .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
 
     return NextResponse.json({
