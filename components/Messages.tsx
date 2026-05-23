@@ -61,7 +61,7 @@ function MessageBubble({ m }: { m: MessageRow }) {
 
 type TileState = "idle" | "loading" | "loaded" | "expired" | "error";
 
-function ImageTile({
+export function ImageTile({
   chatJid,
   messageId,
   small = false,

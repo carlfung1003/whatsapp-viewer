@@ -38,16 +38,38 @@ export default function Sidebar({ chats }: { chats: ChatRow[] }) {
           <Link href="/" className="text-sm font-semibold text-zinc-200 hover:text-white">
             WhatsApp viewer
           </Link>
-          <Link
-            href="/drops"
-            className={`text-xs px-2 py-0.5 rounded border ${
-              pathname.startsWith("/drops")
-                ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Drops
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/drops"
+              className={`text-xs px-2 py-0.5 rounded border ${
+                pathname.startsWith("/drops")
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
+                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Drops
+            </Link>
+            <Link
+              href="/stats"
+              className={`text-xs px-2 py-0.5 rounded border ${
+                pathname.startsWith("/stats")
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
+                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Stats
+            </Link>
+            <Link
+              href="/sql"
+              className={`text-xs px-2 py-0.5 rounded border ${
+                pathname.startsWith("/sql")
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
+                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              SQL
+            </Link>
+          </div>
         </div>
         <input
           type="search"

@@ -231,6 +231,113 @@ function detectDropsLite(items: DropSeed[], minSize: number, windowMs: number): 
   return drops;
 }
 
+// --- Stats queries for /stats dashboard ---
+
+function sinceClause(days: number): string {
+  return new Date(Date.now() - days * 86_400_000).toISOString();
+}
+
+export type TopChat = { name: string; jid: string; msgs: number; is_group: boolean };
+
+export function topChats(days = 30, limit = 10): TopChat[] {
+  const since = sinceClause(days);
+  const rows = messagesDb()
+    .prepare(
+      `SELECT c.jid, c.name, COUNT(*) AS msgs
+       FROM messages m JOIN chats c ON c.jid = m.chat_jid
+       WHERE m.timestamp > ?
+       GROUP BY c.jid ORDER BY msgs DESC LIMIT ?`
+    )
+    .all(since, limit) as Array<{ jid: string; name: string | null; msgs: number }>;
+  return rows.map((r) => ({
+    name: r.name ?? r.jid,
+    jid: r.jid,
+    msgs: r.msgs,
+    is_group: r.jid.endsWith("@g.us"),
+  }));
+}
+
+export type MediaBreakdown = { type: string; count: number };
+
+export function mediaBreakdown(days = 30): MediaBreakdown[] {
+  const since = sinceClause(days);
+  const rows = messagesDb()
+    .prepare(
+      `SELECT COALESCE(media_type, 'text') AS type, COUNT(*) AS count
+       FROM messages WHERE timestamp > ?
+       GROUP BY type ORDER BY count DESC`
+    )
+    .all(since) as Array<{ type: string; count: number }>;
+  return rows;
+}
+
+export type EmojiCount = { emoji: string; count: number };
+
+export function topEmojis(days = 30, limit = 12): EmojiCount[] {
+  const since = sinceClause(days);
+  const rows = messagesDb()
+    .prepare(
+      `SELECT emoji, COUNT(*) AS count
+       FROM reactions WHERE timestamp > ?
+       GROUP BY emoji ORDER BY count DESC LIMIT ?`
+    )
+    .all(since, limit) as Array<{ emoji: string; count: number }>;
+  return rows;
+}
+
+export type HeatmapCell = { dow: number; hour: number; count: number };
+
+export function activityHeatmap(days = 30): HeatmapCell[] {
+  const since = sinceClause(days);
+  const rows = messagesDb()
+    .prepare(
+      `SELECT CAST(strftime('%w', timestamp, 'localtime') AS INT) AS dow,
+              CAST(strftime('%H', timestamp, 'localtime') AS INT) AS hour,
+              COUNT(*) AS count
+       FROM messages WHERE timestamp > ?
+       GROUP BY dow, hour`
+    )
+    .all(since) as Array<{ dow: number; hour: number; count: number }>;
+  return rows;
+}
+
+export type DailyCount = { date: string; count: number };
+
+export function messagesPerDay(days = 30): DailyCount[] {
+  const since = sinceClause(days);
+  const rows = messagesDb()
+    .prepare(
+      `SELECT date(timestamp, 'localtime') AS date, COUNT(*) AS count
+       FROM messages WHERE timestamp > ?
+       GROUP BY date ORDER BY date ASC`
+    )
+    .all(since) as DailyCount[];
+  return rows;
+}
+
+export type OverviewTotals = {
+  total_chats: number;
+  total_messages: number;
+  total_reactions: number;
+  total_images: number;
+  total_active_chats_7d: number;
+};
+
+export function overviewTotals(): OverviewTotals {
+  const m = messagesDb();
+  return {
+    total_chats: (m.prepare("SELECT COUNT(*) AS n FROM chats").get() as { n: number }).n,
+    total_messages: (m.prepare("SELECT COUNT(*) AS n FROM messages").get() as { n: number }).n,
+    total_reactions: (m.prepare("SELECT COUNT(*) AS n FROM reactions").get() as { n: number }).n,
+    total_images: (m.prepare("SELECT COUNT(*) AS n FROM messages WHERE media_type='image'").get() as { n: number }).n,
+    total_active_chats_7d: (m
+      .prepare(
+        "SELECT COUNT(DISTINCT chat_jid) AS n FROM messages WHERE timestamp > ?"
+      )
+      .get(sinceClause(7)) as { n: number }).n,
+  };
+}
+
 export type CrossChatDrop = Drop & {
   chat_jid: string;
   chat_name: string | null;

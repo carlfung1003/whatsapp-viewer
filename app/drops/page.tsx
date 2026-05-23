@@ -1,5 +1,8 @@
 import { listDropsAcrossChats, type CrossChatDrop } from "@/lib/db";
 import Link from "next/link";
+import { ImageTile } from "@/components/Messages";
+
+const THUMBS_PER_DROP = 8;
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +56,17 @@ async function DropCard({ drop }: { drop: CrossChatDrop }) {
         {drop.reaction_count > 0 && (
           <div className="ml-auto text-emerald-400">
             {claimRate}% claimed
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-8 gap-1 mt-1">
+        {drop.message_ids.slice(0, THUMBS_PER_DROP).map((id) => (
+          <ImageTile key={id} chatJid={drop.chat_jid} messageId={id} small />
+        ))}
+        {drop.message_ids.length > THUMBS_PER_DROP && (
+          <div className="aspect-square rounded border border-zinc-800 bg-zinc-900 flex items-center justify-center text-[10px] text-zinc-500">
+            +{drop.message_ids.length - THUMBS_PER_DROP}
           </div>
         )}
       </div>
