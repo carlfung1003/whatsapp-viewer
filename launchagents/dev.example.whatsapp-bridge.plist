@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Save this as ~/Library/LaunchAgents/dev.<you>.whatsapp-bridge.plist with paths
+adjusted. Build the bridge binary first:
+  cd ~/whatsapp-mcp/whatsapp-bridge && go build -o whatsapp-bridge .
+Load with:
+  launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.<you>.whatsapp-bridge.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.example.whatsapp-bridge</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/CHANGEME/whatsapp-mcp/whatsapp-bridge/whatsapp-bridge</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/CHANGEME/whatsapp-mcp/whatsapp-bridge</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/CHANGEME/whatsapp-mcp/whatsapp-bridge/whatsapp.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/CHANGEME/whatsapp-mcp/whatsapp-bridge/whatsapp.log</string>
+</dict>
+</plist>

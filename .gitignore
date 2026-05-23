@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# runtime logs (may contain message content)
+*.log
+viewer.log
+
+# any downloaded WhatsApp media if someone runs this colocated with the bridge
+store/
+*.db
+*.db-journal

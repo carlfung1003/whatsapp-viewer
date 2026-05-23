@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Save this as ~/Library/LaunchAgents/dev.<you>.whatsapp-viewer.plist with paths
+adjusted to your machine. Load with:
+  launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.<you>.whatsapp-viewer.plist
+Unload with:
+  launchctl bootout gui/$(id -u)/dev.<you>.whatsapp-viewer
+
+Run `npm run build` in the viewer first — this serves the production bundle.
+The PATH var must include the directory of the node + npm you want to use
+(nvm-managed nodes are under ~/.nvm/versions/node/<ver>/bin).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.example.whatsapp-viewer</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/CHANGEME/.nvm/versions/node/v22.18.0/bin/npm</string>
+        <string>run</string>
+        <string>start</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/CHANGEME/whatsapp-viewer</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/CHANGEME/.nvm/versions/node/v22.18.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/CHANGEME/whatsapp-viewer/viewer.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/CHANGEME/whatsapp-viewer/viewer.log</string>
+</dict>
+</plist>
