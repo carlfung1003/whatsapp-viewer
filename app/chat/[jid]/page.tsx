@@ -2,6 +2,7 @@ import { listMessages, detectDrops, listChats, aliasesForChatJid } from "@/lib/d
 import { MessageList, DropsBanner } from "@/components/Messages";
 import ChatSummary from "@/components/ChatSummary";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,16 @@ export default async function ChatPage({ params }: { params: Promise<{ jid: stri
               {chat.is_group ? "group" : "dm"} · {chat.message_count.toLocaleString()} messages · {jid}
             </p>
           </div>
-          <ChatSummary chatJid={jid} />
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href={`/chat/${encodeURIComponent(jid)}/replay`}
+              className="text-xs px-2 py-1 rounded border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
+              title="Replay conversation chronologically"
+            >
+              ▶ Replay
+            </Link>
+            <ChatSummary chatJid={jid} />
+          </div>
         </div>
       </header>
 

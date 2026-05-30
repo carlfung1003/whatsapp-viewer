@@ -28,8 +28,38 @@ function stateDb(): Database.Database {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (message_id, chat_jid)
     );
+    CREATE TABLE IF NOT EXISTS topic_cache (
+      cache_key TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   return _db;
+}
+
+export function getTopicCache(key: string, maxAgeHours = 24): unknown | null {
+  const row = stateDb()
+    .prepare(
+      `SELECT payload FROM topic_cache
+       WHERE cache_key = ? AND datetime(created_at) > datetime('now', ?)`
+    )
+    .get(key, `-${maxAgeHours} hours`) as { payload: string } | undefined;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+export function setTopicCache(key: string, payload: unknown): void {
+  stateDb()
+    .prepare(
+      `INSERT INTO topic_cache (cache_key, payload, created_at)
+       VALUES (?, ?, datetime('now'))
+       ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, created_at = excluded.created_at`
+    )
+    .run(key, JSON.stringify(payload));
 }
 
 export type ClaimState = {

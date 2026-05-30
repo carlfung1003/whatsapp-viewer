@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { driftingContacts } from "@/lib/insights";
+import ReopenerButton from "@/components/ReopenerButton";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ export default async function DriftingPage({
                 <div className="text-xs text-zinc-500 tabular-nums">
                   {r.current_count} now vs {r.prior_count} prior · last seen {shortDate(r.last_seen)}
                 </div>
+                <ReopenerButton chatJid={r.chat_jid} />
               </li>
             ))}
           </ul>

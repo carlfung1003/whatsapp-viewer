@@ -23,6 +23,11 @@ const STATIC_ROUTES = [
   "/insights/drifting",
   "/insights/words",
   "/insights/reactions",
+  "/insights/awkward",
+  "/insights/simulator",
+  "/insights/snapshot",
+  "/insights/topics",
+  "/insights/birthdays",
   "/iluxury",
 ];
 
@@ -34,9 +39,12 @@ const SAMPLE_GROUP_JID = "120363072670308311@g.us";
 
 const DYNAMIC_ROUTES = [
   { path: `/chat/${encodeURIComponent(SAMPLE_GROUP_JID)}`, description: "chat detail (group)" },
+  { path: `/chat/${encodeURIComponent(SAMPLE_GROUP_JID)}/replay`, description: "chat replay (group)" },
   { path: "/drops?days=1", description: "drops dashboard 1-day window" },
   { path: "/drops?days=30", description: "drops dashboard 30-day window" },
   { path: "/stats?days=7", description: "stats dashboard 7-day window" },
+  { path: "/insights/awkward?silence=72", description: "awkward 72h silence window" },
+  { path: "/insights/topics?days=14", description: "topics 14-day window" },
 ];
 
 type ApiRoute = {
@@ -55,6 +63,17 @@ const API_ROUTES: ApiRoute[] = [
   { path: "/api/summarize", method: "POST", body: {}, okStatus: [400] },
   // iLuxury claim toggle without required fields — tests route alive + validation
   { path: "/api/iluxury/claim", method: "POST", body: {}, okStatus: [400] },
+  // Simulator validation — both chat_jid + draft are required
+  { path: "/api/simulate", method: "POST", body: {}, okStatus: [400] },
+  // Compose re-opener validation — chat_jid required
+  { path: "/api/compose-reopener", method: "POST", body: {}, okStatus: [400] },
+  // Snapshot OG image — chat query param required
+  { path: "/api/snapshot", method: "GET", okStatus: [400] },
+  // Snapshot with a valid chat — should return 200 PNG
+  { path: `/api/snapshot?chat=${encodeURIComponent(SAMPLE_GROUP_JID)}`, method: "GET", okStatus: [200] },
+  // NOTE: /api/topics intentionally NOT tested — first call per 24h spends Anthropic tokens.
+  // Birthdays ICS — always 200, returns text/calendar
+  { path: "/api/birthdays.ics", method: "GET", okStatus: [200] },
 ];
 
 function listenForBadConsole(page: Page): { messages: ConsoleMessage[]; pageErrors: Error[] } {

@@ -21,7 +21,7 @@ const CARDS = [
   {
     href: "/insights/drifting",
     title: "Drifting relationships",
-    desc: "DMs where activity dropped >50% from the prior 90-day window.",
+    desc: "DMs where activity dropped >50% from prior window. Includes AI re-opener composer.",
   },
   {
     href: "/insights/words",
@@ -33,6 +33,31 @@ const CARDS = [
     title: "Reaction analytics",
     desc: "Your messages that hit, and which emojis you give vs receive.",
   },
+  {
+    href: "/insights/awkward",
+    title: "Awkwardness detector",
+    desc: "Moments where your normal back-and-forth rhythm hit a long silence. The message that landed before the wall.",
+  },
+  {
+    href: "/insights/simulator",
+    title: "Conversation simulator",
+    desc: "Type a draft, Claude predicts how a specific contact would actually respond. Pre-mortem for risky messages.",
+  },
+  {
+    href: "/insights/snapshot",
+    title: "Relationship snapshot",
+    desc: "Spotify-Wrapped-style PNG per contact — totals, peak hour, longest silence, top emoji. One-click download.",
+  },
+  {
+    href: "/insights/topics",
+    title: "Topic graph",
+    desc: "Claude clusters recent DMs into themes (wedding, family, projects). Cached for 24h.",
+  },
+  {
+    href: "/insights/birthdays",
+    title: "Birthdays",
+    desc: "Birthdays inferred from past 🎂 / &ldquo;happy birthday&rdquo; messages. Download as .ics for your calendar.",
+  },
 ];
 
 export default function InsightsHub() {
@@ -41,7 +66,7 @@ export default function InsightsHub() {
       <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
         <h1 className="text-lg font-semibold text-zinc-100">Insights</h1>
         <p className="text-xs text-zinc-500">
-          Six analytics views, all read-only over your bridge SQLite.
+          {CARDS.length} analytics views over your WhatsApp data — SQL-backed where simple, Claude-backed where smart.
         </p>
       </header>
       <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full">
