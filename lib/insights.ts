@@ -617,20 +617,26 @@ export type Birthday = {
 
 const BIRTHDAY_RE = /\b(happy\s+(?:belated\s+)?(?:birthday|bday|bdy))\b|🎂|🎉.{0,20}🎂|生日快樂|生日快乐|生日|HBD/i;
 
-function dayKey(d: Date): string {
-  return `${d.getMonth() + 1}-${d.getDate()}`;
-}
-
 export function detectBirthdays(): Birthday[] {
   // Pull every message that matches our birthday-wish regex. Include groups,
   // because Carl tends to send 🎂 stickers (no text) in DMs, but in groups
   // multiple OTHER people text "happy birthday" — much stronger signal.
+  //
+  // CRITICAL: dates come from SQLite's strftime with 'localtime' modifier, not
+  // `new Date(r.timestamp).getDate()`. Some bridge rows lack a TZ offset in the
+  // stored string; V8 then treats them as local PT instead of UTC, shifting
+  // the date forward by 1. SQLite's 'localtime' modifier assumes UTC input
+  // and converts to server-local correctly. Aligns with messagesPerDay /
+  // dailyMessageCounts / activityHeatmap which already do this.
   const rows = messagesDb()
     .prepare(
-      `SELECT chat_jid, sender, is_from_me, content, timestamp
+      `SELECT chat_jid, sender, is_from_me, content,
+              CAST(strftime('%m', timestamp, 'localtime') AS INT) AS month,
+              CAST(strftime('%d', timestamp, 'localtime') AS INT) AS day,
+              CAST(strftime('%Y', timestamp, 'localtime') AS INT) AS year
        FROM messages WHERE content IS NOT NULL AND content != ''`
     )
-    .all() as Array<{ chat_jid: string; sender: string; is_from_me: number; content: string; timestamp: string }>;
+    .all() as Array<{ chat_jid: string; sender: string; is_from_me: number; content: string; month: number; day: number; year: number }>;
 
   // ── PASS 1: DM birthdays ──
   // For a DM, the partner is unambiguous. Carl wishing them = their birthday.
@@ -643,14 +649,13 @@ export function detectBirthdays(): Birthday[] {
     if (!BIRTHDAY_RE.test(r.content)) continue;
     const aliases = aliasesForChatJid(r.chat_jid);
     const canon = aliases.find((a) => a.endsWith("@s.whatsapp.net")) ?? aliases[0];
-    const d = new Date(r.timestamp);
-    const k = `${canon}|${dayKey(d)}`;
+    const k = `${canon}|${r.month}-${r.day}`;
     const existing = dmHits.get(k);
     if (!existing) {
-      dmHits.set(k, { chat_jid: canon, month: d.getMonth() + 1, day: d.getDate(), year: d.getFullYear(), count: 1 });
+      dmHits.set(k, { chat_jid: canon, month: r.month, day: r.day, year: r.year, count: 1 });
     } else {
       existing.count++;
-      if (d.getFullYear() > existing.year) existing.year = d.getFullYear();
+      if (r.year > existing.year) existing.year = r.year;
     }
   }
   // Pick best (MM-DD) per DM (the most-evidenced date)
@@ -695,14 +700,13 @@ export function detectBirthdays(): Birthday[] {
   for (const r of rows) {
     if (!r.chat_jid.endsWith("@g.us")) continue;
     if (!BIRTHDAY_RE.test(r.content)) continue;
-    const d = new Date(r.timestamp);
-    const k = `${r.chat_jid}|${dayKey(d)}`;
+    const k = `${r.chat_jid}|${r.month}-${r.day}`;
     let evt = groupEvents.get(k);
     if (!evt) {
       evt = {
         chat_jid: r.chat_jid,
-        month: d.getMonth() + 1,
-        day: d.getDate(),
+        month: r.month,
+        day: r.day,
         years: new Set(),
         wishers: new Set(),
         wish_count: 0,
@@ -710,7 +714,7 @@ export function detectBirthdays(): Birthday[] {
       };
       groupEvents.set(k, evt);
     }
-    evt.years.add(d.getFullYear());
+    evt.years.add(r.year);
     evt.wishers.add(r.sender);
     evt.wish_count++;
     const matches = r.content.matchAll(MENTION_PHONE_RE);
@@ -764,7 +768,59 @@ export function detectBirthdays(): Birthday[] {
       existing.mention_count += topMention?.[1] ?? 0;
     }
   }
+  // ── Merge adjacent-day events for the same (chat, recipient) ──
+  // After TZ normalization most birthdays land on one date, but late-night
+  // wishes legitimately straddle midnight. Cluster ±1 day, sum the wishes,
+  // and pick the day with the most votes (ties broken by earliest date).
+  type Cluster = typeof groupAggs extends Map<string, infer V> ? V : never;
+  const byRecipient = new Map<string, Cluster[]>();
   for (const a of groupAggs.values()) {
+    const k = `${a.chat_jid}|${a.mention_phone ?? "?"}`;
+    const list = byRecipient.get(k) ?? [];
+    list.push(a);
+    byRecipient.set(k, list);
+  }
+  const dateMs = (m: number, d: number) => new Date(2000, m - 1, d).getTime(); // 2000 is leap year
+  const mergedAggs: Cluster[] = [];
+  for (const list of byRecipient.values()) {
+    list.sort((x, y) => dateMs(x.month, x.day) - dateMs(y.month, y.day));
+    let cluster: Cluster[] = [];
+    const flush = () => {
+      if (cluster.length === 0) return;
+      // Pick canonical date: max wishes, then earliest
+      cluster.sort((x, y) => y.wish_count - x.wish_count || dateMs(x.month, x.day) - dateMs(y.month, y.day));
+      const peak = cluster[0];
+      const merged: Cluster = {
+        chat_jid: peak.chat_jid,
+        month: peak.month,
+        day: peak.day,
+        wish_count: cluster.reduce((s, c) => s + c.wish_count, 0),
+        wisher_set: new Set<string>(),
+        years: new Set<number>(),
+        mention_phone: peak.mention_phone,
+        mention_count: cluster.reduce((s, c) => s + c.mention_count, 0),
+      };
+      for (const c of cluster) {
+        c.wisher_set.forEach((w) => merged.wisher_set.add(w));
+        c.years.forEach((y) => merged.years.add(y));
+      }
+      mergedAggs.push(merged);
+      cluster = [];
+    };
+    let prev: Cluster | null = null;
+    for (const a of list) {
+      if (prev && Math.abs(dateMs(a.month, a.day) - dateMs(prev.month, prev.day)) <= 86_400_000) {
+        cluster.push(a);
+      } else {
+        flush();
+        cluster.push(a);
+      }
+      prev = a;
+    }
+    flush();
+  }
+
+  for (const a of mergedAggs) {
     const groupName = groupNames.get(a.chat_jid) ?? a.chat_jid;
     let name = "(someone)";
     let recipient_jid: string | null = null;
