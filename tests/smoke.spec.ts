@@ -9,7 +9,22 @@
  */
 import { test, expect, type ConsoleMessage, type Page } from "@playwright/test";
 
-const STATIC_ROUTES = ["/", "/drops", "/sql", "/stats"];
+const STATIC_ROUTES = [
+  "/",
+  "/drops",
+  "/sql",
+  "/stats",
+  "/needs-reply",
+  "/contacts",
+  "/insights",
+  "/insights/reply-latency",
+  "/insights/initiator",
+  "/insights/calendar",
+  "/insights/drifting",
+  "/insights/words",
+  "/insights/reactions",
+  "/iluxury",
+];
 
 // A real group jid from the local bridge. WhatsApp has two group-jid formats:
 //   <creator-phone>-<unix-ts>@g.us   (legacy, exposes the creator's phone)
@@ -38,6 +53,8 @@ const API_ROUTES: ApiRoute[] = [
   { path: "/api/sql", method: "POST", body: { query: "DELETE FROM messages" }, okStatus: [400] },
   // Summarize without chat_jid — tests the route is alive without spending Anthropic tokens
   { path: "/api/summarize", method: "POST", body: {}, okStatus: [400] },
+  // iLuxury claim toggle without required fields — tests route alive + validation
+  { path: "/api/iluxury/claim", method: "POST", body: {}, okStatus: [400] },
 ];
 
 function listenForBadConsole(page: Page): { messages: ConsoleMessage[]; pageErrors: Error[] } {

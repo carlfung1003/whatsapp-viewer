@@ -9,14 +9,14 @@ let _whatsappDb: Database.Database | null = null;
 let _nameCache: Map<string, string> | null = null;
 let _ownLidCache: Set<string> | null = null;
 
-function messagesDb(): Database.Database {
+export function messagesDb(): Database.Database {
   if (!_messagesDb) {
     _messagesDb = new Database(path.join(BRIDGE_STORE, "messages.db"), { readonly: true, fileMustExist: true });
   }
   return _messagesDb;
 }
 
-function whatsappDb(): Database.Database {
+export function whatsappDb(): Database.Database {
   if (!_whatsappDb) {
     _whatsappDb = new Database(path.join(BRIDGE_STORE, "whatsapp.db"), { readonly: true, fileMustExist: true });
   }

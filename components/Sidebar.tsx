@@ -43,7 +43,9 @@ export default function Sidebar({ chats }: { chats: ChatRow[] }) {
               { href: "/needs-reply", label: "Reply" },
               { href: "/contacts", label: "People" },
               { href: "/drops", label: "Drops" },
+              { href: "/iluxury", label: "iLuxury" },
               { href: "/stats", label: "Stats" },
+              { href: "/insights", label: "Insights" },
               { href: "/sql", label: "SQL" },
             ].map((nav) => (
               <Link
