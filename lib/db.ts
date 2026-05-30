@@ -160,11 +160,26 @@ export function listChats(limit = 50): ChatRow[] {
     }
   }
 
+  // Final enrichment: when chats.name is null/numeric (no saved contact),
+  // fall back to resolveName() which checks whatsmeow_lid_map → contacts for
+  // push_name / full_name / first_name. Unresolvable phones come back as
+  // "+<phone>"; truly opaque LIDs stay numeric.
+  const looksNumeric = (s: string | null) => !s || /^[0-9]+$/.test(s);
   return Array.from(byCanonical.values())
     .filter((r) => r.last_message_time !== null)
+    // Filter junk jids that have no useful content (the literal "0" entry,
+    // and the rare bare-number chat rows that are neither DMs nor groups)
+    .filter((r) => r.jid !== "0")
     .sort((a, b) => (a.last_message_time! < b.last_message_time! ? 1 : -1))
     .slice(0, limit)
-    .map((r) => ({ ...r, is_group: r.jid.endsWith("@g.us") }));
+    .map((r) => {
+      let displayName = r.name;
+      if (looksNumeric(displayName)) {
+        const resolved = resolveName(r.jid.split("@")[0]);
+        if (resolved && resolved !== "(unknown)") displayName = resolved;
+      }
+      return { ...r, name: displayName, is_group: r.jid.endsWith("@g.us") };
+    });
 }
 
 export type Reaction = { reactor: string; reactor_name: string; emoji: string; timestamp: string };

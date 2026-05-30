@@ -5,7 +5,18 @@ import Simulator from "@/components/Simulator";
 export const dynamic = "force-dynamic";
 
 export default function SimulatorPage() {
-  const dms = listChats(300).filter((c) => !c.is_group);
+  // DMs only; need at least a handful of messages to give Claude a voice sample.
+  // Sort: contacts with a real (non-numeric) name first, then by recency.
+  const looksNumeric = (s: string | null) => !s || /^[+\d]+$/.test(s);
+  const dms = listChats(500)
+    .filter((c) => !c.is_group)
+    .filter((c) => c.message_count >= 5)
+    .sort((a, b) => {
+      const aNamed = !looksNumeric(a.name) ? 0 : 1;
+      const bNamed = !looksNumeric(b.name) ? 0 : 1;
+      if (aNamed !== bNamed) return aNamed - bNamed;
+      return (a.last_message_time ?? "") < (b.last_message_time ?? "") ? 1 : -1;
+    });
 
   return (
     <div className="h-screen flex flex-col">

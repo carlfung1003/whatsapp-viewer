@@ -604,78 +604,195 @@ export function recentDmMessages(chatJid: string, limit = 40): SimpleMessage[] {
 
 export type Birthday = {
   chat_jid: string;
-  name: string;            // the person whose birthday it is (the chat partner in DM, or the wisher in groups — we restrict to DMs)
-  month: number;           // 1-12
-  day: number;             // 1-31
-  evidence_count: number;  // how many times "happy birthday" was wished on this MM-DD
+  source: "dm" | "group";
+  group_name: string | null;    // populated for group birthdays
+  name: string;                  // birthday person's display name (or "(unknown)")
+  recipient_jid: string | null;  // identified via @mention in group wishes; null if not identified
+  month: number;                 // 1-12
+  day: number;                   // 1-31
+  evidence_count: number;        // total wishes on this MM-DD
+  distinct_wishers: number;      // distinct senders who wished on this MM-DD
   last_wish_year: number;
 };
 
-const BIRTHDAY_RE = /\b(happy\s+(?:belated\s+)?(?:birthday|bday|bdy))\b|🎂|🎉.{0,20}🎂|生日快樂|生日快乐/i;
+const BIRTHDAY_RE = /\b(happy\s+(?:belated\s+)?(?:birthday|bday|bdy))\b|🎂|🎉.{0,20}🎂|生日快樂|生日快乐|生日|HBD/i;
+
+function dayKey(d: Date): string {
+  return `${d.getMonth() + 1}-${d.getDate()}`;
+}
 
 export function detectBirthdays(): Birthday[] {
-  // Pull every message in DMs (so chat partner is unambiguous) where content matches.
-  // Strategy: a wish goes "from me to them" — those are reliable. "from them to me"
-  // could also reveal MY birthday, but skip self-detection (Carl knows his own).
+  // Pull every message that matches our birthday-wish regex. Include groups,
+  // because Carl tends to send 🎂 stickers (no text) in DMs, but in groups
+  // multiple OTHER people text "happy birthday" — much stronger signal.
   const rows = messagesDb()
     .prepare(
-      `SELECT chat_jid, is_from_me, content, timestamp
-       FROM messages
-       WHERE chat_jid NOT LIKE '%@g.us' AND content IS NOT NULL AND is_from_me = 1`
+      `SELECT chat_jid, sender, is_from_me, content, timestamp
+       FROM messages WHERE content IS NOT NULL AND content != ''`
     )
-    .all() as Array<{ chat_jid: string; is_from_me: number; content: string; timestamp: string }>;
+    .all() as Array<{ chat_jid: string; sender: string; is_from_me: number; content: string; timestamp: string }>;
 
-  type Key = string; // canon_jid + "-" + MM + "-" + DD
-  const hits = new Map<Key, { chat_jid: string; month: number; day: number; year: number; count: number }>();
-
+  // ── PASS 1: DM birthdays ──
+  // For a DM, the partner is unambiguous. Carl wishing them = their birthday.
+  // Skip wishes they sent to Carl (that's HIS birthday, he knows).
+  type DmAgg = { chat_jid: string; month: number; day: number; year: number; count: number };
+  const dmHits = new Map<string, DmAgg>();
   for (const r of rows) {
+    if (r.chat_jid.endsWith("@g.us")) continue;
+    if (!r.is_from_me) continue;
     if (!BIRTHDAY_RE.test(r.content)) continue;
     const aliases = aliasesForChatJid(r.chat_jid);
     const canon = aliases.find((a) => a.endsWith("@s.whatsapp.net")) ?? aliases[0];
     const d = new Date(r.timestamp);
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    const y = d.getFullYear();
-    const k = `${canon}-${m}-${day}`;
-    const existing = hits.get(k);
+    const k = `${canon}|${dayKey(d)}`;
+    const existing = dmHits.get(k);
     if (!existing) {
-      hits.set(k, { chat_jid: canon, month: m, day, year: y, count: 1 });
+      dmHits.set(k, { chat_jid: canon, month: d.getMonth() + 1, day: d.getDate(), year: d.getFullYear(), count: 1 });
     } else {
-      existing.count += 1;
-      if (y > existing.year) existing.year = y;
+      existing.count++;
+      if (d.getFullYear() > existing.year) existing.year = d.getFullYear();
     }
   }
-
-  // De-duplicate per chat: a partner's birthday should be ONE date. Pick the
-  // (MM-DD) with the highest count (wished multiple years in a row is a strong signal).
-  const byChat = new Map<string, Array<{ month: number; day: number; year: number; count: number }>>();
-  for (const v of hits.values()) {
-    const list = byChat.get(v.chat_jid) ?? [];
-    list.push({ month: v.month, day: v.day, year: v.year, count: v.count });
-    byChat.set(v.chat_jid, list);
+  // Pick best (MM-DD) per DM (the most-evidenced date)
+  const byDmChat = new Map<string, DmAgg[]>();
+  for (const agg of dmHits.values()) {
+    const list = byDmChat.get(agg.chat_jid) ?? [];
+    list.push(agg);
+    byDmChat.set(agg.chat_jid, list);
   }
-
   const out: Birthday[] = [];
-  for (const [chat_jid, list] of byChat) {
+  for (const [chat_jid, list] of byDmChat) {
     list.sort((a, b) => b.count - a.count || b.year - a.year);
     const best = list[0];
-    if (best.count < 1) continue;
     out.push({
       chat_jid,
+      source: "dm",
+      group_name: null,
       name: resolveName(chat_jid.split("@")[0]),
+      recipient_jid: chat_jid.split("@")[0],
       month: best.month,
       day: best.day,
       evidence_count: best.count,
+      distinct_wishers: 1,
       last_wish_year: best.year,
     });
   }
 
-  // Sort by upcoming (days from today)
+  // ── PASS 2: Group birthdays ──
+  // In a group, a date is a birthday if ≥2 distinct people wished or ≥3 wishes total.
+  // Recipient: most-@mentioned phone across the day's wish messages.
+  type GroupEvent = {
+    chat_jid: string;
+    month: number;
+    day: number;
+    years: Set<number>;
+    wishers: Set<string>;
+    wish_count: number;
+    mentions: Map<string, number>;
+  };
+  const groupEvents = new Map<string, GroupEvent>();
+  const MENTION_PHONE_RE = /@(\d{6,})/g;
+  for (const r of rows) {
+    if (!r.chat_jid.endsWith("@g.us")) continue;
+    if (!BIRTHDAY_RE.test(r.content)) continue;
+    const d = new Date(r.timestamp);
+    const k = `${r.chat_jid}|${dayKey(d)}`;
+    let evt = groupEvents.get(k);
+    if (!evt) {
+      evt = {
+        chat_jid: r.chat_jid,
+        month: d.getMonth() + 1,
+        day: d.getDate(),
+        years: new Set(),
+        wishers: new Set(),
+        wish_count: 0,
+        mentions: new Map(),
+      };
+      groupEvents.set(k, evt);
+    }
+    evt.years.add(d.getFullYear());
+    evt.wishers.add(r.sender);
+    evt.wish_count++;
+    const matches = r.content.matchAll(MENTION_PHONE_RE);
+    for (const m of matches) {
+      const phone = m[1];
+      evt.mentions.set(phone, (evt.mentions.get(phone) ?? 0) + 1);
+    }
+  }
+  // Group names lookup
+  const groupNameRows = messagesDb()
+    .prepare("SELECT jid, name FROM chats WHERE jid LIKE '%@g.us'")
+    .all() as Array<{ jid: string; name: string | null }>;
+  const groupNames = new Map(groupNameRows.map((r) => [r.jid, r.name] as const));
+
+  // Aggregate group events per (group, recipient_or_date) so a recurring birthday
+  // wished N years in a row counts as ONE entry, not N.
+  type GroupAgg = {
+    chat_jid: string;
+    month: number;
+    day: number;
+    wish_count: number;
+    wisher_set: Set<string>;
+    years: Set<number>;
+    mention_phone: string | null;
+    mention_count: number;
+  };
+  const groupAggKey = (chat_jid: string, m: number, d: number, mentionPhone: string | null) =>
+    `${chat_jid}|${m}-${d}|${mentionPhone ?? "?"}`;
+  const groupAggs = new Map<string, GroupAgg>();
+  for (const evt of groupEvents.values()) {
+    if (evt.wishers.size < 2 && evt.wish_count < 3) continue; // too thin to be a birthday
+    const topMention = Array.from(evt.mentions.entries()).sort((a, b) => b[1] - a[1])[0];
+    const mentionPhone = topMention?.[0] ?? null;
+    const k = groupAggKey(evt.chat_jid, evt.month, evt.day, mentionPhone);
+    const existing = groupAggs.get(k);
+    if (!existing) {
+      groupAggs.set(k, {
+        chat_jid: evt.chat_jid,
+        month: evt.month,
+        day: evt.day,
+        wish_count: evt.wish_count,
+        wisher_set: new Set(evt.wishers),
+        years: new Set(evt.years),
+        mention_phone: mentionPhone,
+        mention_count: topMention?.[1] ?? 0,
+      });
+    } else {
+      existing.wish_count += evt.wish_count;
+      evt.wishers.forEach((s) => existing.wisher_set.add(s));
+      evt.years.forEach((y) => existing.years.add(y));
+      existing.mention_count += topMention?.[1] ?? 0;
+    }
+  }
+  for (const a of groupAggs.values()) {
+    const groupName = groupNames.get(a.chat_jid) ?? a.chat_jid;
+    let name = "(someone)";
+    let recipient_jid: string | null = null;
+    if (a.mention_phone) {
+      name = resolveName(a.mention_phone);
+      recipient_jid = a.mention_phone;
+    }
+    out.push({
+      chat_jid: a.chat_jid,
+      source: "group",
+      group_name: groupName,
+      name,
+      recipient_jid,
+      month: a.month,
+      day: a.day,
+      evidence_count: a.wish_count,
+      distinct_wishers: a.wisher_set.size,
+      last_wish_year: Math.max(...a.years),
+    });
+  }
+
+  // ── Sort by upcoming ──
   const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   function daysUntil(b: Birthday): number {
     const target = new Date(today.getFullYear(), b.month - 1, b.day);
-    if (target.getTime() < today.getTime()) target.setFullYear(today.getFullYear() + 1);
-    return Math.floor((target.getTime() - today.getTime()) / 86_400_000);
+    if (target.getTime() < startOfToday) target.setFullYear(today.getFullYear() + 1);
+    return Math.floor((target.getTime() - startOfToday) / 86_400_000);
   }
   return out.sort((a, b) => daysUntil(a) - daysUntil(b));
 }
