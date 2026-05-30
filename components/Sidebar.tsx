@@ -38,37 +38,26 @@ export default function Sidebar({ chats }: { chats: ChatRow[] }) {
           <Link href="/" className="text-sm font-semibold text-zinc-200 hover:text-white">
             WhatsApp viewer
           </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/drops"
-              className={`text-xs px-2 py-0.5 rounded border ${
-                pathname.startsWith("/drops")
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Drops
-            </Link>
-            <Link
-              href="/stats"
-              className={`text-xs px-2 py-0.5 rounded border ${
-                pathname.startsWith("/stats")
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Stats
-            </Link>
-            <Link
-              href="/sql"
-              className={`text-xs px-2 py-0.5 rounded border ${
-                pathname.startsWith("/sql")
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              SQL
-            </Link>
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            {[
+              { href: "/needs-reply", label: "Reply" },
+              { href: "/contacts", label: "People" },
+              { href: "/drops", label: "Drops" },
+              { href: "/stats", label: "Stats" },
+              { href: "/sql", label: "SQL" },
+            ].map((nav) => (
+              <Link
+                key={nav.href}
+                href={nav.href}
+                className={`text-xs px-2 py-0.5 rounded border ${
+                  pathname.startsWith(nav.href.split("/").slice(0, 2).join("/"))
+                    ? "bg-zinc-800 border-zinc-700 text-zinc-100"
+                    : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                {nav.label}
+              </Link>
+            ))}
           </div>
         </div>
         <input

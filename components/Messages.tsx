@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { MessageRow, Drop } from "@/lib/db";
 
@@ -23,7 +24,14 @@ function MessageBubble({ m }: { m: MessageRow }) {
           mine ? "bg-emerald-900/40 border border-emerald-800" : "bg-zinc-900 border border-zinc-800"
         }`}
       >
-        {!mine && <div className="text-xs font-medium text-emerald-400 mb-1">{m.sender_name}</div>}
+        {!mine && (
+          <Link
+            href={`/contact/${encodeURIComponent(m.sender.replace(/@.*/, ""))}`}
+            className="text-xs font-medium text-emerald-400 hover:text-emerald-300 hover:underline mb-1 block"
+          >
+            {m.sender_name}
+          </Link>
+        )}
 
         {m.quoted_message_id && (
           <div className="mb-1 border-l-2 border-zinc-600 pl-2 text-xs text-zinc-400">

@@ -154,7 +154,7 @@ export function listChats(limit = 50): ChatRow[] {
       ) {
         existing.last_message_time = r.last_message_time;
       }
-      // Prefer a name that's not just the raw jid number (e.g. "Rachel Cheng" over "216951817253089")
+      // Prefer a name that's not just a raw numeric jid (a contact name over a bare phone/LID)
       const looksNumeric = (s: string | null) => !s || /^[0-9]+$/.test(s);
       if (looksNumeric(existing.name) && !looksNumeric(r.name)) existing.name = r.name;
     }
@@ -293,6 +293,214 @@ function detectDropsLite(items: DropSeed[], minSize: number, windowMs: number): 
   }
   flush();
   return drops;
+}
+
+// --- /needs-reply ---
+
+export type NeedsReplyRow = {
+  chat_jid: string;
+  chat_name: string | null;
+  sender: string;
+  sender_name: string;
+  content: string | null;
+  media_type: string | null;
+  timestamp: string;
+  hours_ago: number;
+};
+
+/**
+ * DMs where the latest message is not from me AND is older than `hoursMin` (so
+ * I've had at least that much time to reply and haven't). Group chats are
+ * excluded for now — group @-mention detection is a future enhancement.
+ */
+export function listNeedsReply(hoursMin = 2, limit = 100): NeedsReplyRow[] {
+  // For each chat (canonical), find the latest message across all alias jids.
+  const chats = listChats(500);
+  const rows: NeedsReplyRow[] = [];
+  for (const c of chats) {
+    if (c.is_group) continue;
+    const aliases = aliasesForChatJid(c.jid);
+    const placeholders = aliases.map(() => "?").join(",");
+    const last = messagesDb()
+      .prepare(
+        `SELECT id, chat_jid, sender, content, media_type, timestamp, is_from_me
+         FROM messages WHERE chat_jid IN (${placeholders})
+         ORDER BY timestamp DESC LIMIT 1`
+      )
+      .get(...aliases) as
+      | {
+          id: string;
+          chat_jid: string;
+          sender: string;
+          content: string | null;
+          media_type: string | null;
+          timestamp: string;
+          is_from_me: number;
+        }
+      | undefined;
+    if (!last || last.is_from_me) continue;
+    const hours = (Date.now() - new Date(last.timestamp).getTime()) / 3_600_000;
+    if (hours < hoursMin) continue;
+    rows.push({
+      chat_jid: c.jid,
+      chat_name: c.name,
+      sender: last.sender,
+      sender_name: resolveName(last.sender),
+      content: last.content,
+      media_type: last.media_type,
+      timestamp: last.timestamp,
+      hours_ago: hours,
+    });
+  }
+  rows.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+  return rows.slice(0, limit);
+}
+
+// --- /contacts + /contact/[key] ---
+
+export type ContactRow = {
+  key: string;             // canonical phone identifier (the `pn` from lid_map, or LID if no pn)
+  name: string;
+  phone: string | null;
+  last_active: string | null;
+  message_count: number;
+};
+
+/**
+ * Aggregated contacts list across the union of whatsmeow_contacts + every sender
+ * we've ever observed. Each contact gets a canonical key (phone preferred, LID
+ * as fallback) and a count of messages they sent in any chat.
+ */
+export function listContactsWithActivity(limit = 200): ContactRow[] {
+  // Walk every distinct sender we've stored
+  const senders = messagesDb()
+    .prepare("SELECT sender, COUNT(*) AS n, MAX(timestamp) AS last_ts FROM messages WHERE is_from_me = 0 GROUP BY sender")
+    .all() as Array<{ sender: string; n: number; last_ts: string }>;
+
+  const byKey = new Map<string, { name: string; phone: string | null; last_active: string | null; message_count: number }>();
+  for (const s of senders) {
+    if (!s.sender) continue;
+    // Determine canonical key: prefer phone form. If sender is bare LID, look up pn.
+    let key = s.sender;
+    let phone: string | null = null;
+    try {
+      const lidRow = whatsappDb()
+        .prepare("SELECT pn FROM whatsmeow_lid_map WHERE lid = ?")
+        .get(s.sender) as { pn?: string } | undefined;
+      if (lidRow?.pn) {
+        key = lidRow.pn;
+        phone = lidRow.pn;
+      } else if (/^\d+$/.test(s.sender)) {
+        phone = s.sender;
+      }
+    } catch {
+      /* ignore */
+    }
+    const name = resolveName(s.sender);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { name, phone, last_active: s.last_ts, message_count: s.n });
+    } else {
+      existing.message_count += s.n;
+      if (s.last_ts && (!existing.last_active || s.last_ts > existing.last_active)) {
+        existing.last_active = s.last_ts;
+      }
+      // Prefer a real name over a numeric fallback
+      if (/^\+?\d+$/.test(existing.name) && !/^\+?\d+$/.test(name)) existing.name = name;
+    }
+  }
+
+  return Array.from(byKey.entries())
+    .map(([key, v]) => ({ key, name: v.name, phone: v.phone, last_active: v.last_active, message_count: v.message_count }))
+    .sort((a, b) => (a.last_active && b.last_active ? (a.last_active < b.last_active ? 1 : -1) : 0))
+    .slice(0, limit);
+}
+
+export type ContactMessageRow = MessageRow & {
+  chat_name: string | null;
+  is_group: boolean;
+};
+
+/**
+ * Every message sent by a contact, across all chats they appear in. Handles
+ * LID/PN aliasing: a contact "key" of either phone or LID resolves to all
+ * sender variants we've ever stored for them.
+ */
+export function listContactMessagesAcrossChats(contactKey: string, limit = 300): ContactMessageRow[] {
+  // Resolve aliases — a contact's sender field could be the phone OR the LID
+  const aliases = new Set<string>([contactKey]);
+  try {
+    if (/^\d+$/.test(contactKey)) {
+      // It's a phone — look up matching LID
+      const r = whatsappDb()
+        .prepare("SELECT lid FROM whatsmeow_lid_map WHERE pn = ?")
+        .get(contactKey) as { lid?: string } | undefined;
+      if (r?.lid) aliases.add(r.lid);
+    } else {
+      // It's a LID — look up matching phone
+      const r = whatsappDb()
+        .prepare("SELECT pn FROM whatsmeow_lid_map WHERE lid = ?")
+        .get(contactKey) as { pn?: string } | undefined;
+      if (r?.pn) aliases.add(r.pn);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const placeholders = Array.from(aliases).map(() => "?").join(",");
+  const raw = messagesDb()
+    .prepare(
+      `SELECT m.id, m.chat_jid, m.sender, m.content, m.timestamp, m.is_from_me,
+              m.media_type, m.filename, m.quoted_message_id, c.name AS chat_name
+       FROM messages m LEFT JOIN chats c ON c.jid = m.chat_jid
+       WHERE m.sender IN (${placeholders}) AND m.is_from_me = 0
+       ORDER BY m.timestamp DESC LIMIT ?`
+    )
+    .all(...aliases, limit) as Array<{
+      id: string;
+      chat_jid: string;
+      sender: string;
+      content: string | null;
+      timestamp: string;
+      is_from_me: number;
+      media_type: string | null;
+      filename: string | null;
+      quoted_message_id: string | null;
+      chat_name: string | null;
+    }>;
+
+  // Bulk reactions
+  const reactionsById = new Map<string, Reaction[]>();
+  if (raw.length > 0) {
+    const ids = raw.map((r) => r.id);
+    const ph = ids.map(() => "?").join(",");
+    const rRows = messagesDb()
+      .prepare(`SELECT target_id, reactor, emoji, timestamp FROM reactions WHERE target_id IN (${ph})`)
+      .all(...ids) as Array<{ target_id: string; reactor: string; emoji: string; timestamp: string }>;
+    for (const r of rRows) {
+      const list = reactionsById.get(r.target_id) ?? [];
+      list.push({ reactor: r.reactor, reactor_name: resolveName(r.reactor), emoji: r.emoji, timestamp: r.timestamp });
+      reactionsById.set(r.target_id, list);
+    }
+  }
+
+  return raw.map<ContactMessageRow>((r) => ({
+    id: r.id,
+    chat_jid: r.chat_jid,
+    sender: r.sender,
+    sender_name: resolveName(r.sender),
+    content: r.content,
+    timestamp: r.timestamp,
+    is_from_me: r.is_from_me,
+    media_type: r.media_type,
+    filename: r.filename,
+    quoted_message_id: r.quoted_message_id,
+    quoted_preview: null,
+    quoted_sender_name: null,
+    reactions: reactionsById.get(r.id) ?? [],
+    chat_name: r.chat_name,
+    is_group: r.chat_jid.endsWith("@g.us"),
+  }));
 }
 
 // --- Stats queries for /stats dashboard ---
