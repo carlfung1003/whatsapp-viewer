@@ -83,7 +83,7 @@ WhatsApp (your phone, primary device)
 ```bash
 # Use the fork with our patches (reactions + quoted-replies capture, filename
 # collision fix, QR-to-PNG helper, whatsmeow API update via PR #245)
-git clone https://github.com/carlfung/whatsapp-mcp.git ~/whatsapp-mcp
+git clone https://github.com/carlfung1003/whatsapp-mcp.git ~/whatsapp-mcp
 cd ~/whatsapp-mcp/whatsapp-bridge
 go build -o whatsapp-bridge .
 ```
@@ -151,7 +151,7 @@ launchctl print gui/$(id -u)/dev.<you>.whatsapp-bridge | grep state
 ### 4. Install the viewer
 
 ```bash
-git clone https://github.com/carlfung/whatsapp-viewer.git ~/whatsapp-viewer
+git clone https://github.com/carlfung1003/whatsapp-viewer.git ~/whatsapp-viewer
 cd ~/whatsapp-viewer
 npm install
 npm run dev    # localhost:8081
@@ -239,7 +239,7 @@ Scrubbable timeline of any chat. Drag the slider or press play; messages animate
 | `/insights/simulator` | Pick a contact, type a draft, get Claude's prediction of how that specific person would actually reply, based on their past message patterns | Claude |
 | `/insights/snapshot` | Spotify-Wrapped-style 1200×630 PNG card per contact (totals, peak hour, longest silence, top emoji, reaction traffic) via `next/og`. Downloadable | next/og + SQL |
 | `/insights/topics` | Claude clusters recent DMs into 4–8 themes ("wedding planning", "work logistics"). 24h cache in `topic_cache` table to avoid re-spending tokens | Claude (cached) |
-| `/insights/birthdays` | Birthdays inferred from past 🎂 / "happy birthday" / 生日快樂 / HBD messages. DMs use Carl→partner wishes; groups use ≥2 distinct wishers + @-mention recipient detection. Dates extracted via `strftime(...'localtime')` to avoid V8 TZ off-by-one. `.ics` export to import into Google Calendar | SQL |
+| `/insights/birthdays` | Birthdays inferred from past 🎂 / "happy birthday" / 生日快樂 / HBD messages. DMs use you→partner wishes; groups use ≥2 distinct wishers + @-mention recipient detection. Dates extracted via `strftime(...'localtime')` to avoid V8 TZ off-by-one. `.ics` export to import into Google Calendar | SQL |
 
 The Claude-backed views (`drifting` re-opener, `simulator`, `topics`) all require `ANTHROPIC_API_KEY` in `.env.local`. Without one, the AI buttons return clear errors but the rest of the page still loads.
 
