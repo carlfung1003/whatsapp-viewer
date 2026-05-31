@@ -3,22 +3,31 @@
 A local-only web dashboard for your personal WhatsApp data, paired with the [lharries/whatsapp-mcp](https://github.com/lharries/whatsapp-mcp) bridge.
 
 - **Sidebar + chat detail** with sender names resolved, reactions and quoted replies rendered inline
-- **`/drops`** dashboard for tracking auction-style image bursts across groups (claim rates, quoted replies)
-- **`/stats`** recharts-powered: top chats, daily volume, media types, reaction emojis, activity heatmap
-- **`/sql`** read-only playground with 10 sample queries, ⌘+Enter to run, localStorage history
-- **✨ AI summary** button per chat (Claude Sonnet 4.6 + prompt caching, ~$0.03 cold then ~$0.002 follow-ups)
+- **`/needs-reply`** — DMs where the latest message is theirs and you haven't responded
+- **`/contacts`** — every person you've ever messaged, with per-contact timelines across all chats
+- **`/drops`** — auction-style image bursts across groups (claim rates, quoted replies)
+- **`/iluxury`** — claim ledger for vintage-luxury group with paid/shipped toggles (persistent state)
+- **`/stats`** — recharts-powered: top chats, daily volume, media types, reaction emojis, activity heatmap
+- **`/sql`** — read-only playground with 10 sample queries, ⌘+Enter to run, localStorage history
+- **`/insights`** — 11 analytics views over your data (reply latency, drifting relationships, awkwardness detector, conversation simulator, relationship snapshot PNGs, topic clustering, birthday inference, etc.)
+- **`/chat/[jid]/replay`** — scrubbable conversation timeline, 1×–600× playback speeds, reactions appear at their real timestamps
+- **✨ AI features** — Sonnet 4.6 via Anthropic API with prompt caching for chat summary, reply simulation, drift re-opener composition, and topic clustering
 - **Click-to-load image previews** with HTTP 410 graceful fallback for CDN-expired media
+- **37 Playwright smoke tests**, 8-second runtime (`npm test`)
 
-Built in one evening to scratch a personal itch for a specific use case (tracking which items in a vintage-luxury auction group got claimed) — captures the full stack so anyone with a similar workflow can reproduce it.
+Built to scratch a personal itch (tracking auction items) and grew into a personal analytics suite for WhatsApp data — captures the full stack so anyone with a similar workflow can reproduce it.
 
 ## What you end up with
 
 Two always-on services on your Mac:
 
 - **`:8080`** — the WhatsApp bridge (Go, [whatsmeow](https://github.com/tulir/whatsmeow)), paired once to your personal WhatsApp via QR. Captures every message, reaction, and quoted-reply context into a local SQLite DB. Runs as a LaunchAgent.
-- **`:8081`** — this viewer (Next.js 16), reads the bridge's SQLite read-only. Runs as a LaunchAgent.
+- **`:8081`** — this viewer (Next.js 16), reads the bridge's SQLite read-only and writes viewer-managed state (paid/shipped toggles, topic-cluster cache) to a separate SQLite at `~/whatsapp-viewer-state/state.db`. Runs as a LaunchAgent.
 
-Plus an MCP server that exposes the same data to Claude Code if you want to query it conversationally.
+Plus:
+
+- An **MCP server** that exposes the same data to Claude Code if you want to query it conversationally.
+- An optional **daily digest** LaunchAgent (`scripts/wa-digest.py` — see comments) that drafts a Gmail summary of needs-reply DMs + top activity, using your existing `google_workspace_mcp` OAuth credentials.
 
 ## Architecture
 
@@ -37,17 +46,25 @@ WhatsApp (your phone, primary device)
     │ reads SQLite                │ POST /api/download
     │ read-only                   │
     ▼                             ▼
-┌──────────────────┐         ┌────────────────────────────┐
-│  whatsapp-viewer │         │  whatsapp-mcp-server       │
-│  (Next.js, :8081)│         │  (Python, stdio MCP)       │
-│  • Sidebar       │         │  • search_contacts         │
-│  • Chat detail   │         │  • list_messages           │
-│  • /drops        │         │  • list_reactions          │
-│  • /api/media/*  │         │  • send_message etc.       │
-└──────────────────┘         └────────────────────────────┘
-        │                                │
-        ▼                                ▼
-   your browser                  Claude Code session
+┌──────────────────────────┐         ┌────────────────────────────┐
+│  whatsapp-viewer         │         │  whatsapp-mcp-server       │
+│  (Next.js 16, :8081)     │         │  (Python, stdio MCP)       │
+│  • Sidebar / chat detail │         │  • search_contacts         │
+│  • /drops · /iluxury     │         │  • list_messages           │
+│  • /stats · /sql         │         │  • list_reactions          │
+│  • /needs-reply          │         │  • send_message etc.       │
+│  • /contacts             │         └────────────────────────────┘
+│  • /insights (11 views)  │                     │
+│  • /chat/[jid]/replay    │                     ▼
+│  • /api/media/*          │              Claude Code session
+│  • Claude API (summary,  │
+│    simulator, reopener,  │
+│    topics)               │
+└──────────────────────────┘
+        │                  │
+        ▼                  ▼
+   your browser    ~/whatsapp-viewer-state/state.db
+                   (paid/shipped toggles, topic-cluster cache)
 ```
 
 ## Prerequisites
@@ -175,15 +192,56 @@ Restart Claude Code. `mcp__whatsapp__*` tools will appear in the deferred tool l
 
 ### Browsing
 
-- **Sidebar** — top chats sorted by real last activity (computed from `MAX(messages.timestamp)`, not the stale `chats.last_message_time`). Client-side search filter. Group/DM tag + message count. Toggle row at top jumps to `/drops`, `/stats`, `/sql`.
-- **Chat detail** — last 200 messages, sender LIDs resolved to contact names via the bridge's `whatsmeow_lid_map` + `whatsmeow_contacts` tables. Quoted replies show a preview of the message they're quoting. Reactions appear inline next to the timestamp with the reactor's name. **Order toggle** (`↓ Newest` / `↑ Oldest`) flips chronological direction with the preference saved per browser. In-chat search filter.
+- **Sidebar** — top chats sorted by real last activity (computed from `MAX(messages.timestamp)`, not the stale `chats.last_message_time`). Client-side search filter. Chats with numeric-looking names are back-filled via `resolveName()` (whatsmeow_lid_map → whatsmeow_contacts → push_name). Group/DM tag + message count. Top nav: Reply, People, Drops, iLuxury, Stats, Insights, SQL.
+- **Chat detail** — last 200 messages, sender LIDs resolved to contact names. Quoted replies show a preview of the message they're quoting. Reactions appear inline next to the timestamp with the reactor's name. **Order toggle** (`↓ Newest` / `↑ Oldest`) flips chronological direction with the preference saved per browser. In-chat search filter. **▶ Replay** button jumps to the scrubbable timeline.
 - **LID/PN dedup** — WhatsApp's gradual rollout of LID addressing splits a DM into two `chat_jid` rows (one `<phone>@s.whatsapp.net`, one `<lid>@lid`). The sidebar merges these into one row using `whatsmeow_lid_map`, and the chat-detail view pulls messages from both halves. Bookmarks of either URL still resolve correctly.
+
+### Needs reply (`/needs-reply`)
+
+DMs where the latest message is from them and is older than 2 hours (configurable). Group chats are excluded (no @-mention detection yet). Sorted by recency. One-click to the chat. Designed to be the first page you open in the morning.
+
+### Contacts (`/contacts`, `/contact/[key]`)
+
+Every person you've ever messaged, aggregated across all chats. The contacts list shows last-active time and message count. Click a contact for a **per-contact timeline** that shows their messages across every chat they appear in (groups + DMs), with chat-name pills that filter the timeline client-side. Useful for catching "what was the last thing X said to me anywhere?" without remembering which group.
 
 ### Image drops
 
 - **Per-chat drops banner** — clusters of ≥5 images from the same sender within 5 minutes get a dedicated grid above the messages. Each tile is click-to-load (saves your model quota — no images are fetched until you ask). Tiles turn green when they have a reaction ("claimed" in auction-style group workflows). Per-drop counts of reactions and quoted-replies make it easy to spot which items generated interest.
 - **Cross-chat `/drops` dashboard** — every image burst across every chat over the last 1/3/7/14/30 days, sorted by recency. Each card shows chat name, sender, time range, item count, reactions, quoted replies, and a `%claimed` rate. The first 8 thumbnails are shown inline (click to load real bytes), plus a `+N` indicator for the rest.
 - **`/api/media/[chat_jid]/[msg_id]`** — checks the bridge's local cache first, falls back to triggering a fresh download via the bridge's REST endpoint, streams the decrypted bytes with the right Content-Type. Returns HTTP 410 for media WhatsApp has purged from their CDN (everything older than ~30–45 days) so the UI can render a soft "expired" placeholder.
+
+### iLuxury claim ledger (`/iluxury`)
+
+The motivating use case. A vintage-luxury auction group posts image bursts ("drops"); customers react with an emoji to claim an item; sellers manually track paid/shipped status. This view:
+
+- Detects drops from the bridge SQLite (≥5 images, same sender, within 5 min).
+- Joins each item to its reaction (= claimer) and to a writable **`claim_state`** table in `~/whatsapp-viewer-state/state.db`.
+- Renders an accordion of drops with per-item rows: claimer name, paid/shipped checkboxes (POST `/api/iluxury/claim`, optimistic UI), and a green border when claimed.
+- Window selector (7/14/30/60/90d) preserved in the URL; per-chat picker for groups with "iluxury" in the name.
+
+### Conversation replay (`/chat/[jid]/replay`)
+
+Scrubbable timeline of any chat. Drag the slider or press play; messages animate in at their actual timestamps, reactions appear when they happened. Speed control: 1× (real-time) → 600× (a day per second). Auto-scrolls to the bottom as messages appear. Useful for surfacing pacing patterns that disappear in a static log view — burst moments, awkward pauses, reaction storms.
+
+### Insights hub (`/insights`)
+
+11 analytics views over your chat history. All read-only over the bridge SQLite; AI-backed views use Sonnet 4.6 via the Anthropic API.
+
+| Route | What | Backend |
+|---|---|---|
+| `/insights/reply-latency` | Median / p90 time-to-reply per DM (windowed SQL `LEAD` over `messages`) | SQL |
+| `/insights/initiator` | Conversation-start ratio per DM — who reaches out first after ≥6h silence | SQL (windowed `LAG`) |
+| `/insights/calendar` | GitHub-style year grid of daily message volume, 5-bucket intensity | SQL |
+| `/insights/drifting` | DMs where current 90d volume dropped >50% from prior 90d. Includes **"✦ Compose re-opener"** Claude button per row — generates a contextual opener referencing your last shared topic | SQL + Claude |
+| `/insights/words` | Top words + emojis in a specific chat (stopword-filtered, emoji regex via `\p{Extended_Pictographic}`) | SQL |
+| `/insights/reactions` | Your messages that got the most reactions + emoji-traffic (given vs received) | SQL |
+| `/insights/awkward` | Moments where reply rhythm jumped from <X min to ≥24h (≥5× the chat's normal cadence). Shows the message that landed before the silence | SQL |
+| `/insights/simulator` | Pick a contact, type a draft, get Claude's prediction of how that specific person would actually reply, based on their past message patterns | Claude |
+| `/insights/snapshot` | Spotify-Wrapped-style 1200×630 PNG card per contact (totals, peak hour, longest silence, top emoji, reaction traffic) via `next/og`. Downloadable | next/og + SQL |
+| `/insights/topics` | Claude clusters recent DMs into 4–8 themes ("wedding planning", "work logistics"). 24h cache in `topic_cache` table to avoid re-spending tokens | Claude (cached) |
+| `/insights/birthdays` | Birthdays inferred from past 🎂 / "happy birthday" / 生日快樂 / HBD messages. DMs use Carl→partner wishes; groups use ≥2 distinct wishers + @-mention recipient detection. Dates extracted via `strftime(...'localtime')` to avoid V8 TZ off-by-one. `.ics` export to import into Google Calendar | SQL |
+
+The Claude-backed views (`drifting` re-opener, `simulator`, `topics`) all require `ANTHROPIC_API_KEY` in `.env.local`. Without one, the AI buttons return clear errors but the rest of the page still loads.
 
 ### `/stats` dashboard
 
@@ -216,6 +274,43 @@ The chat detail page has an **✨ Summarize** button in the top-right that calls
 - Requires `ANTHROPIC_API_KEY` in `.env.local` — see "Optional: Claude API key" above. Without one, the button gracefully returns "key not set."
 
 Rough pricing on Sonnet 4.6: ~$0.03 cold (first call for a chat, 200-message context) → ~$0.002 each follow-up question within 5 minutes via the cache.
+
+## State DB
+
+Viewer-managed state lives in a writable SQLite at `~/whatsapp-viewer-state/state.db`, kept separate from the bridge's read-only `messages.db` so the boundary is unambiguous.
+
+Tables:
+
+```
+claim_state  (message_id, chat_jid, paid, shipped, claimer_override, notes, updated_at)
+              PRIMARY KEY (message_id, chat_jid)
+              -- written by /iluxury checkboxes via POST /api/iluxury/claim
+topic_cache  (cache_key, payload TEXT, created_at)
+              -- cached topic-clustering results (24h TTL)
+              -- written by POST /api/topics; read on cache hit to skip Claude call
+```
+
+Helpers in `lib/state-db.ts` (`getClaimStates`, `setClaimState`, `getTopicCache`, `setTopicCache`). The directory is created on first run with `0700` permissions.
+
+## Testing
+
+```bash
+npm test          # Playwright smoke suite, 37 tests, ~8s
+npm run test:ui   # Playwright UI mode
+```
+
+The suite covers:
+
+- Every static route returns 200 with **zero console errors** (catches client-side render bugs).
+- Dynamic routes with query params (chat detail, replay, drops/stats windows) return 200.
+- Every API route handler returns the expected validation status on empty/invalid bodies (`/api/sql`, `/api/summarize`, `/api/iluxury/claim`, `/api/simulate`, `/api/compose-reopener`, `/api/snapshot`, `/api/birthdays.ics`).
+- The snapshot OG image route returns a valid PNG when given a valid chat.
+- Sidebar renders chat names from the DB.
+- No broken `<img>` sources on the homepage.
+
+Anthropic-backed routes that would spend tokens (`/api/topics` first call) are intentionally NOT exercised — only their validation paths. CI is intentionally skipped because the test fixtures depend on the local bridge SQLite.
+
+The suite is the deployment-breakage net: pre-commit, `npm test` should pass; if it doesn't, don't push.
 
 ## Querying the SQLite directly
 
@@ -322,15 +417,24 @@ The viewer at `/sql` has these and more pre-loaded.
 
 ## Iteration workflow
 
-To work on the viewer while the production LaunchAgent is running:
+The LaunchAgent runs `npm run start` (production), so new routes/files only show up after `npm run build` + restart. For active development:
 
 ```bash
 launchctl bootout gui/$(id -u)/dev.<you>.whatsapp-viewer
 cd ~/whatsapp-viewer
 npm run dev     # HMR, code changes live
 # ...edit...
+npm test        # Playwright smoke suite, ~8s
 npm run build
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.<you>.whatsapp-viewer.plist
+```
+
+Or, when running the smoke suite against the production server without booting it out:
+
+```bash
+npm run build
+launchctl kickstart -k gui/$(id -u)/dev.<you>.whatsapp-viewer  # restart in place
+npm test                                                        # reuses :8081
 ```
 
 The bridge LaunchAgent can stay running through viewer iteration — they're independent.
@@ -339,6 +443,8 @@ The bridge LaunchAgent can stay running through viewer iteration — they're ind
 
 - **Everything is local.** No cloud anywhere. The bridge's SQLite contains your entire WhatsApp history, including media decryption keys; the viewer reads it read-only. Nothing leaves your Mac unless you choose to expose `:8081` via Tailscale Serve, Cloudflare Tunnel, etc.
 - **The `whatsapp-bridge/store/` directory holds session creds + decrypted message history.** It is git-ignored at multiple layers. Never commit it. Never rsync it to an unencrypted destination.
+- **`~/whatsapp-viewer-state/state.db`** holds your paid/shipped toggles + cached topic-clusters. It is created with `0700` permissions and lives outside the repo. Manual state only — no message content.
+- **AI features send chat content to Anthropic.** Chat-summary, simulator, drift re-opener, and topic-clustering routes call the Anthropic API. Snippets of your messages go to Anthropic to generate the response. If that's not OK, don't set `ANTHROPIC_API_KEY` — the AI buttons return clear errors and the rest of the app still works.
 - **MCP exposure is opt-in.** When wired up, Claude Code reads your messages on demand. The same prompt-injection caveat as any agent-readable inbox applies — a malicious message could attempt to instruct the assistant. If you don't want this risk, skip step 6.
 - **WhatsApp ToS.** Unofficial clients (whatsmeow, Baileys, etc.) violate the personal-WhatsApp terms of service. Account-ban risk is low for read-heavy use but non-zero. Pair a number you'd accept losing if you're cautious.
 
