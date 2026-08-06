@@ -110,6 +110,8 @@ qrcode.make(open('/tmp/whatsapp-qr.txt').read().strip(), box_size=12, border=2).
 
 On your phone: WhatsApp → Settings → Linked Devices → Link a Device → scan.
 
+> The QR rotates every ~20s and the scan window closes after 3 minutes, so re-render from `/tmp/whatsapp-qr.txt` rather than reusing an older PNG. If the device is ever unlinked later, the bridge will **not** recover on its own — see [Troubleshooting](#the-viewer-shows-old-messages--stopped-updating).
+
 The bridge will sync your full history (can take a few minutes if you have lots of chats). You'll see "Stored N messages" logged repeatedly. Stop the bridge with Ctrl+C once "History sync complete" appears — we'll daemonize it next.
 
 ### 3. Daemonize the bridge (LaunchAgent)
@@ -438,6 +440,84 @@ npm test                                                        # reuses :8081
 ```
 
 The bridge LaunchAgent can stay running through viewer iteration — they're independent.
+
+## Troubleshooting
+
+### The viewer shows old messages / stopped updating
+
+**Check the bridge's pairing state before you debug the viewer.** This is almost never a viewer bug — `/chat/[jid]` is `force-dynamic` and every route reads SQLite per request, so the viewer has no stale-cache failure mode. If the page renders, it is showing you exactly what is in `messages.db`.
+
+The usual cause is that the bridge got unlinked — you removed the device in WhatsApp → Linked Devices, or WhatsApp force-unlinked it. This failure is nasty because **every obvious health signal still looks fine**:
+
+| Signal | Says | Actually |
+|---|---|---|
+| `pgrep -f whatsapp-bridge` | process alive | alive, but sessionless and stuck that way |
+| `curl localhost:8081/chat/<jid>` | HTTP 200, full page | faithfully rendering a frozen database |
+| Page content | hundreds of real messages | all of them stale |
+| `whatsapp.log` mtime | updated recently | on-demand media downloads still work without a socket session |
+
+The one signal that doesn't lie:
+
+```bash
+sqlite3 ~/whatsapp-mcp/whatsapp-bridge/store/whatsapp.db "SELECT COUNT(*) FROM whatsmeow_device;"
+# 0 = logged out.  1 = paired.
+
+ls -la ~/whatsapp-mcp/whatsapp-bridge/store/messages.db      # mtime = the moment sync died
+grep -a "Device logged out" ~/whatsapp-mcp/whatsapp-bridge/whatsapp.log | tail -3
+```
+
+The log line is explicit: `Got device removed stream error, sending LoggedOut event and deleting session`.
+
+**Why it never self-heals:** the bridge handles `events.LoggedOut` by logging a warning and nothing else. The QR-pairing branch is gated on `client.Store.ID == nil`, which is evaluated *only at startup* — so a process that booted with a valid session can never get back to pairing, no matter how long it runs. `KeepAlive` doesn't help either, because the process never exits.
+
+### Re-pairing
+
+Kill it and let `KeepAlive` do the rest. The replacement process starts with no session, so it enters QR pairing on its own:
+
+```bash
+rm -f /tmp/whatsapp-qr.txt
+kill $(pgrep -f "whatsapp-bridge/whatsapp-bridge")     # launchd respawns within ThrottleInterval (10s)
+until [ -s /tmp/whatsapp-qr.txt ]; do sleep 1; done    # QR lands shortly after
+
+uv run --with "qrcode[pil]" python -c "
+import qrcode
+qrcode.make(open('/tmp/whatsapp-qr.txt').read().strip(), box_size=10, border=4).save('/tmp/wa-qr.png')
+" && open /tmp/wa-qr.png
+```
+
+Scan it: WhatsApp → Settings → Linked Devices → Link a Device.
+
+Two timing traps worth knowing before you start:
+
+- **The code rotates every ~20s.** Always re-render from the current `/tmp/whatsapp-qr.txt`; don't reuse a PNG you generated a minute ago. If you want to remove the race, run a loop that re-renders the PNG in place whenever the file's mtime changes — Preview reloads it automatically, so the image on screen is always current.
+- **There is a hard 3-minute ceiling on the scan.** Letting it lapse is harmless: the process exits, launchd restarts it, and a fresh QR cycle begins. You just need a new render.
+
+Confirm success by polling for the device row rather than reading the log:
+
+```bash
+sqlite3 ~/whatsapp-mcp/whatsapp-bridge/store/whatsapp.db "SELECT jid FROM whatsmeow_device;"
+```
+
+No viewer restart is needed afterward — it picks up new rows on the next request.
+
+### Did the backfill actually recover the gap?
+
+Re-pairing triggers an automatic history sync, and in practice it recovers the outage window essentially in full. But verify rather than assume, because a *truncated* sync also looks like a successful one. Three checks that tell them apart:
+
+1. **Front-edge continuity.** Truncation drops the oldest messages first, so query the first message after the logout timestamp. If it lands within minutes of the outage, nothing was shaved off the front.
+   ```sql
+   SELECT timestamp, chat_jid FROM messages WHERE timestamp > '<logout-ts>' ORDER BY timestamp ASC LIMIT 5;
+   ```
+2. **Per-chat ceiling.** Group the gap window by `chat_jid`. A suspiciously round maximum (exactly 100) means you hit a sync limit; an organic spread means you didn't.
+3. **Outgoing capture.** Compare `SUM(is_from_me)` over the gap against a normal baseline window. Messages you sent from your phone while the bridge was unlinked should come back at a comparable ratio — if outgoing is badly underrepresented, the sync was partial.
+
+Raw messages-per-day is a **poor** completeness signal on its own; weekday/weekend mix swamps the difference. Note also that `requestHistorySync()` and its 100-message limit are defined but never called, so that cap is dead code and is not what constrains recovery — don't go looking there first.
+
+Text is what comes back reliably; **media is the real casualty.** Blobs download on demand and WhatsApp expires them from its CDN (see the `410 Gone` handling described above), so images from an older gap may be permanently unrecoverable even when their message rows return.
+
+### This fails silently
+
+Nothing alerts on an unlinked bridge. A live process, a `200`, and a page full of real messages all report healthy while sync has been dead for days. If you depend on this data, monitor **freshness, not liveness** — alert when `whatsmeow_device` is empty or `messages.db` mtime exceeds a few hours. That is the check that catches this the same day instead of whenever you happen to open a chat.
 
 ## Privacy
 
