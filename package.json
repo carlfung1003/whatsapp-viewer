@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 8081",
     "build": "next build",
-    "start": "next start -p 8081",
+    "start": "next start -p 8081 -H 127.0.0.1",
     "lint": "eslint",
     "test": "playwright test",
     "test:ui": "playwright test --ui"

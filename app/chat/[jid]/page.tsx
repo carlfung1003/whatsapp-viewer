@@ -20,13 +20,13 @@ export default async function ChatPage({ params }: { params: Promise<{ jid: stri
   const drops = detectDrops(messages);
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       <header className="border-b border-zinc-800 px-4 py-3 bg-zinc-950/80 backdrop-blur sticky top-0 z-20">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-base font-semibold text-zinc-100 truncate">{chat.name ?? jid}</h1>
             <p className="text-xs text-zinc-500">
-              {chat.is_group ? "group" : "dm"} · {chat.message_count.toLocaleString()} messages · {jid}
+              {chat.is_group ? "group" : "dm"} · {chat.message_count.toLocaleString()} messages<span className="hidden md:inline"> · {jid}</span>
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">

@@ -88,7 +88,7 @@ export default async function DropsDashboard({
   const totalQuoted = drops.reduce((s, d) => s + d.quoted_reply_count, 0);
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>

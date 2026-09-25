@@ -7,7 +7,7 @@ export default async function InitiatorPage() {
   const rows = initiatorRatioPerChat(6, 3);
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>

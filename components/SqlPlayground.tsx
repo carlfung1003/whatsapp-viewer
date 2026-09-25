@@ -150,7 +150,7 @@ export default function SqlPlayground() {
   const cols = useMemo(() => result?.columns ?? [], [result]);
 
   return (
-    <div className="h-screen grid grid-cols-[280px_1fr]">
+    <div className="h-full grid md:grid-cols-[280px_1fr]">
       <aside className="border-r border-zinc-800 overflow-y-auto">
         <div className="p-3 border-b border-zinc-800">
           <h2 className="text-xs uppercase tracking-wide text-zinc-500">Sample queries</h2>

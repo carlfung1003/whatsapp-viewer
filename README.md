@@ -180,6 +180,17 @@ npm run build
 
 Then a plist similar to the bridge's, but running `npm run start` instead of the binary. Example in this repo at `launchagents/dev.example.whatsapp-viewer.plist`.
 
+### 5b. (optional) Reach it from your phone via Tailscale
+
+`npm run start` binds to `127.0.0.1` only, so nothing on your LAN can reach it. To use it from other devices on your tailnet:
+
+```bash
+echo 'VIEWER_PASSCODE=<pick-one>' >> .env.local   # then rebuild + restart
+tailscale serve --bg --https=443 http://127.0.0.1:8081
+```
+
+It's then at `https://<machine>.<tailnet>.ts.net`. `proxy.ts` asks each device for the passcode once (1-year cookie); direct `localhost` requests skip the gate so scripts and tests keep working. Use `127.0.0.1`, not `localhost`, in the Serve target — the server doesn't listen on `::1`.
+
 ### 6. (optional) Wire the MCP server into Claude Code
 
 ```bash
@@ -521,7 +532,7 @@ Nothing alerts on an unlinked bridge. A live process, a `200`, and a page full o
 
 ## Privacy
 
-- **Everything is local.** No cloud anywhere. The bridge's SQLite contains your entire WhatsApp history, including media decryption keys; the viewer reads it read-only. Nothing leaves your Mac unless you choose to expose `:8081` via Tailscale Serve, Cloudflare Tunnel, etc.
+- **Everything is local.** No cloud anywhere. The bridge's SQLite contains your entire WhatsApp history, including media decryption keys; the viewer reads it read-only. Nothing leaves your Mac unless you choose to expose `:8081` via Tailscale Serve (step 5b — tailnet-only, passcode-gated), Cloudflare Tunnel, etc. Never expose it publicly (Tailscale Funnel etc.) — the passcode is a convenience lock, not real auth, and `/api/sql` runs arbitrary read queries.
 - **The `whatsapp-bridge/store/` directory holds session creds + decrypted message history.** It is git-ignored at multiple layers. Never commit it. Never rsync it to an unencrypted destination.
 - **`~/whatsapp-viewer-state/state.db`** holds your paid/shipped toggles + cached topic-clusters. It is created with `0700` permissions and lives outside the repo. Manual state only — no message content.
 - **AI features send chat content to Anthropic.** Chat-summary, simulator, drift re-opener, and topic-clustering routes call the Anthropic API. Snippets of your messages go to Anthropic to generate the response. If that's not OK, don't set `ANTHROPIC_API_KEY` — the AI buttons return clear errors and the rest of the app still works.

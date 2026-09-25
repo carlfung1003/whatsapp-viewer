@@ -20,7 +20,7 @@ function MessageBubble({ m }: { m: MessageRow }) {
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[70%] rounded-lg px-3 py-2 ${
+        className={`max-w-[85%] md:max-w-[70%] rounded-lg px-3 py-2 ${
           mine ? "bg-emerald-900/40 border border-emerald-800" : "bg-zinc-900 border border-zinc-800"
         }`}
       >

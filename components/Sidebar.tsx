@@ -19,7 +19,7 @@ function relativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export default function Sidebar({ chats }: { chats: ChatRow[] }) {
+export default function Sidebar({ chats, onCollapse }: { chats: ChatRow[]; onCollapse?: () => void }) {
   const [q, setQ] = useState("");
   const pathname = usePathname();
 
@@ -32,36 +32,45 @@ export default function Sidebar({ chats }: { chats: ChatRow[] }) {
   }, [q, chats]);
 
   return (
-    <aside className="border-r border-zinc-800 flex flex-col h-screen">
+    <aside className="md:border-r border-zinc-800 flex flex-col h-full">
       <div className="p-3 border-b border-zinc-800 flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-sm font-semibold text-zinc-200 hover:text-white">
+        <div className="flex items-center justify-between gap-2">
+          <Link href="/" className="text-sm font-semibold text-zinc-200 hover:text-white truncate">
             WhatsApp viewer
           </Link>
-          <div className="flex items-center gap-1 flex-wrap justify-end">
-            {[
-              { href: "/needs-reply", label: "Reply" },
-              { href: "/contacts", label: "People" },
-              { href: "/drops", label: "Drops" },
-              { href: "/iluxury", label: "iLuxury" },
-              { href: "/stats", label: "Stats" },
-              { href: "/insights", label: "Insights" },
-              { href: "/sql", label: "SQL" },
-            ].map((nav) => (
-              <Link
-                key={nav.href}
-                href={nav.href}
-                className={`text-xs px-2 py-0.5 rounded border ${
-                  pathname.startsWith(nav.href.split("/").slice(0, 2).join("/"))
-                    ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                    : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                {nav.label}
-              </Link>
-            ))}
-          </div>
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              className="hidden md:block shrink-0 text-xs px-1.5 py-0.5 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+              title="Hide chat list"
+            >
+              «
+            </button>
+          )}
         </div>
+        <nav className="flex items-center gap-1 flex-wrap">
+          {[
+            { href: "/needs-reply", label: "Reply" },
+            { href: "/contacts", label: "People" },
+            { href: "/drops", label: "Drops" },
+            { href: "/iluxury", label: "iLuxury" },
+            { href: "/stats", label: "Stats" },
+            { href: "/insights", label: "Insights" },
+            { href: "/sql", label: "SQL" },
+          ].map((nav) => (
+            <Link
+              key={nav.href}
+              href={nav.href}
+              className={`text-xs px-2 py-0.5 rounded border ${
+                pathname.startsWith(nav.href.split("/").slice(0, 2).join("/"))
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
+                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              {nav.label}
+            </Link>
+          ))}
+        </nav>
         <input
           type="search"
           placeholder="Search chats…"

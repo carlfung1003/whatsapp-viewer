@@ -22,7 +22,7 @@ export default async function CalendarPage({
   const yearOptions = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -62,7 +62,7 @@ const CARDS = [
 
 export default function InsightsHub() {
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
         <h1 className="text-lg font-semibold text-zinc-100">Insights</h1>
         <p className="text-xs text-zinc-500">
