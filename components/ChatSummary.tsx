@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Markdown from "@/components/Markdown";
 
 type Usage = {
   input_tokens: number;
@@ -101,7 +102,7 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
   }
 
   return (
-    <div className="border-b border-zinc-800 bg-zinc-950 px-4 py-3">
+    <div className="basis-full order-last min-w-0 mt-3 pt-3 border-t border-zinc-800">
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs uppercase tracking-wide text-zinc-500">AI summary</span>
         <button
@@ -171,8 +172,8 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
         </div>
       )}
       {result?.summary && (
-        <div className="mt-3 text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">
-          {result.summary}
+        <div className="mt-3 max-h-[50dvh] overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed">
+          <Markdown>{result.summary}</Markdown>
           {result.usage && (
             <div className="mt-3 text-[10px] text-zinc-500">
               {result.model} · {result.message_count} messages ·{" "}

@@ -22,23 +22,22 @@ export default async function ChatPage({ params }: { params: Promise<{ jid: stri
   return (
     <div className="h-full flex flex-col">
       <header className="border-b border-zinc-800 px-4 py-3 bg-zinc-950/80 backdrop-blur sticky top-0 z-20">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        {/* flex-wrap: an open ChatSummary panel takes its own full-width row */}
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+          <div className="min-w-0 flex-1">
             <h1 className="text-base font-semibold text-zinc-100 truncate">{chat.name ?? jid}</h1>
             <p className="text-xs text-zinc-500">
               {chat.is_group ? "group" : "dm"} · {chat.message_count.toLocaleString()} messages<span className="hidden md:inline"> · {jid}</span>
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href={`/chat/${encodeURIComponent(jid)}/replay`}
-              className="text-xs px-2 py-1 rounded border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
-              title="Replay conversation chronologically"
-            >
-              ▶ Replay
-            </Link>
-            <ChatSummary chatJid={jid} />
-          </div>
+          <Link
+            href={`/chat/${encodeURIComponent(jid)}/replay`}
+            className="shrink-0 text-xs px-2 py-1 rounded border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
+            title="Replay conversation chronologically"
+          >
+            ▶ Replay
+          </Link>
+          <ChatSummary chatJid={jid} />
         </div>
       </header>
 
