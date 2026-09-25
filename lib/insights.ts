@@ -918,6 +918,8 @@ export function topChatSamples(days = 30, topN = 25, sampleChars = 1500): ChatSa
 
 export type ReplayMessage = {
   id: string;
+  chat_jid: string;
+  sender: string;
   sender_name: string;
   is_from_me: number;
   content: string | null;
@@ -931,11 +933,11 @@ export function replayMessages(chatJid: string, limit = 500): ReplayMessage[] {
   const ph = aliases.map(() => "?").join(",");
   const rows = messagesDb()
     .prepare(
-      `SELECT id, sender, is_from_me, content, media_type, timestamp
+      `SELECT id, chat_jid, sender, is_from_me, content, media_type, timestamp
        FROM messages WHERE chat_jid IN (${ph})
        ORDER BY timestamp DESC LIMIT ?`
     )
-    .all(...aliases, limit) as Array<{ id: string; sender: string; is_from_me: number; content: string | null; media_type: string | null; timestamp: string }>;
+    .all(...aliases, limit) as Array<{ id: string; chat_jid: string; sender: string; is_from_me: number; content: string | null; media_type: string | null; timestamp: string }>;
 
   // Bulk reactions
   const ids = rows.map((r) => r.id);
@@ -955,6 +957,8 @@ export function replayMessages(chatJid: string, limit = 500): ReplayMessage[] {
   return rows
     .map<ReplayMessage>((r) => ({
       id: r.id,
+      chat_jid: r.chat_jid,
+      sender: r.sender,
       sender_name: r.is_from_me ? "Me" : resolveName(r.sender),
       is_from_me: r.is_from_me,
       content: r.content,

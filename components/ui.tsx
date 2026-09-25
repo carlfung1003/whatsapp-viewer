@@ -9,6 +9,11 @@ function hueFor(seed: string): number {
   return h % 360;
 }
 
+// Sender-name colour: same hue as the avatar, brighter for text on dark.
+export function senderColor(seed: string): string {
+  return `oklch(0.8 0.1 ${hueFor(seed)})`;
+}
+
 function initials(name: string): string {
   const clean = name.replace(/[^\p{L}\p{N}\s]/gu, "").trim();
   if (!clean) return "?";

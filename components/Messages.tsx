@@ -14,7 +14,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import type { MessageRow, Drop } from "@/lib/db";
-import { dayLabel } from "@/components/ui";
+import { dayLabel, senderColor } from "@/components/ui";
 
 const ORDER_KEY = "whatsapp-viewer.message-order";
 const GROUP_GAP_MS = 5 * 60_000;
@@ -36,13 +36,6 @@ function shortTime(iso: string) {
 function dayKey(iso: string) {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-// Same stable hue per sender as the avatars, brighter for text on dark.
-function senderColor(seed: string) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return `oklch(0.8 0.1 ${h % 360})`;
 }
 
 /* ---------- Lightbox ---------- */
