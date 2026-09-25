@@ -210,6 +210,21 @@ export function listChats(limit = 50, withPreview = true): ChatRow[] {
     });
 }
 
+const MEDIA_WORD: Record<string, string> = {
+  image: "Photo",
+  video: "Video",
+  audio: "Voice message",
+  document: "Document",
+  sticker: "Sticker",
+};
+
+// Caption if the quoted media had one, else a readable label instead of "[image]".
+function quotePreview(mediaType: string | null, content: string | null): string {
+  const text = (content ?? "").trim();
+  if (text) return text.slice(0, 80);
+  return mediaType ? MEDIA_WORD[mediaType] ?? "Attachment" : "";
+}
+
 export type Reaction = { reactor: string; reactor_name: string; emoji: string; timestamp: string };
 
 export type MessageRow = {
@@ -273,7 +288,7 @@ export function listMessages(chatJid: string, limit = 200): MessageRow[] {
       return {
         ...r,
         sender_name: r.is_from_me ? "Me" : resolveName(r.sender),
-        quoted_preview: q ? (q.media_type ? `[${q.media_type}]` : (q.content ?? "").slice(0, 80)) : null,
+        quoted_preview: q ? quotePreview(q.media_type, q.content) : null,
         quoted_sender_name: q ? resolveName(q.sender) : null,
         reactions: reactionsById.get(r.id) ?? [],
       };

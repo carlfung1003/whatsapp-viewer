@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowsDownUp,
   ArrowBendUpLeft,
@@ -99,6 +99,16 @@ export function ImageTile({
 }) {
   const [state, setState] = useState<TileState>("loading");
   const [open, setOpen] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // A cached image can finish loading before React hydrates and attaches
+  // onLoad, which left it invisible behind the skeleton. Check on mount.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete) {
+      if (img.naturalWidth > 0) setState("loaded");
+    }
+  }, []);
   // ?v=2 busts browser cache entries written before the filename-collision fix
   // (2026-05-22), when many URLs were cached pointing to the same bytes.
   const src = `/api/media/${encodeURIComponent(chatJid)}/${encodeURIComponent(messageId)}?v=2`;
@@ -147,6 +157,7 @@ export function ImageTile({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          ref={imgRef}
           src={src}
           alt={caption ?? (sticker ? "Sticker" : "Photo")}
           loading="lazy"
@@ -352,7 +363,7 @@ export function MessageList({ messages, isGroup = true }: { messages: MessageRow
             <Fragment key={`${m.chat_jid}-${m.id}`}>
               {newDay && (
                 <div className="sticky top-[57px] z-[5] flex justify-center py-3 pointer-events-none">
-                  <span className="px-3 h-7 inline-flex items-center rounded-full bg-[var(--color-surface-3)]/90 backdrop-blur text-xs font-medium text-zinc-300 ring-1 ring-white/5" suppressHydrationWarning>
+                  <span className="px-3 h-7 inline-flex items-center rounded-full bg-[var(--color-surface-3)] text-xs font-medium text-zinc-300 ring-1 ring-white/5 shadow-[0_2px_8px_rgb(0_0_0/0.4)]" suppressHydrationWarning>
                     {dayLabel(m.timestamp)}
                   </span>
                 </div>
