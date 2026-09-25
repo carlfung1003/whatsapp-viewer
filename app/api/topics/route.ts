@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { topChatSamples } from "@/lib/insights";
 import { getTopicCache, setTopicCache } from "@/lib/state-db";
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-sonnet-5";
 
 type Topic = {
   topic: string;
@@ -51,7 +51,9 @@ export async function POST(req: Request) {
   try {
     const completion = await client.messages.create({
       model: MODEL,
-      max_tokens: 2000,
+      // Sonnet 5 runs adaptive thinking by default; thinking shares max_tokens.
+      max_tokens: 8000,
+      output_config: { effort: "medium" },
       system: [
         {
           type: "text",

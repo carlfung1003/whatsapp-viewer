@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { listMessages } from "@/lib/db";
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-sonnet-5";
 const DEFAULT_LIMIT = 200;
 
 export async function POST(req: Request) {
@@ -63,7 +63,9 @@ export async function POST(req: Request) {
   try {
     const completion = await client.messages.create({
       model: MODEL,
-      max_tokens: 1500,
+      // Sonnet 5 runs adaptive thinking by default; thinking shares max_tokens.
+      max_tokens: 8000,
+      output_config: { effort: "medium" },
       system: [
         {
           type: "text",
