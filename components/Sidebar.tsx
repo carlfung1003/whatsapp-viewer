@@ -3,20 +3,54 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { ChatRow } from "@/lib/db";
+import {
+  ArrowBendUpLeft,
+  CaretDoubleLeft,
+  ChartBar,
+  Database,
+  Diamond,
+  File,
+  Image as ImageIcon,
+  MagnifyingGlass,
+  Microphone,
+  Sparkle,
+  Stack,
+  UsersThree,
+  VideoCamera,
+  WhatsappLogo,
+  X,
+} from "@phosphor-icons/react";
+import type { ChatRow, LastPreview } from "@/lib/db";
+import { Avatar, listTime } from "@/components/ui";
 
-function relativeTime(iso: string | null): string {
-  if (!iso) return "";
-  const t = new Date(iso).getTime();
-  const diff = Date.now() - t;
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString();
+const NAV = [
+  { href: "/needs-reply", label: "Reply", icon: ArrowBendUpLeft },
+  { href: "/contacts", label: "People", icon: UsersThree },
+  { href: "/drops", label: "Drops", icon: Stack },
+  { href: "/iluxury", label: "iLuxury", icon: Diamond },
+  { href: "/stats", label: "Stats", icon: ChartBar },
+  { href: "/insights", label: "Insights", icon: Sparkle },
+  { href: "/sql", label: "SQL", icon: Database },
+];
+
+const MEDIA_LABEL: Record<string, { label: string; icon: typeof ImageIcon }> = {
+  image: { label: "Photo", icon: ImageIcon },
+  video: { label: "Video", icon: VideoCamera },
+  audio: { label: "Voice message", icon: Microphone },
+  document: { label: "Document", icon: File },
+};
+
+function Preview({ p }: { p: LastPreview | null | undefined }) {
+  if (!p) return <span className="text-zinc-600">No messages</span>;
+  const media = p.media_type ? MEDIA_LABEL[p.media_type] ?? { label: p.media_type, icon: File } : null;
+  const who = p.is_from_me ? "You" : p.sender_name;
+  return (
+    <span className="flex items-center gap-1 min-w-0">
+      {who && <span className="shrink-0 text-zinc-400">{who}:</span>}
+      {media && <media.icon size={14} className="shrink-0 text-zinc-500" />}
+      <span className="truncate">{p.content?.trim() || media?.label || ""}</span>
+    </span>
+  );
 }
 
 export default function Sidebar({ chats, onCollapse }: { chats: ChatRow[]; onCollapse?: () => void }) {
@@ -27,90 +61,117 @@ export default function Sidebar({ chats, onCollapse }: { chats: ChatRow[]; onCol
     const needle = q.trim().toLowerCase();
     if (!needle) return chats;
     return chats.filter(
-      (c) => (c.name ?? "").toLowerCase().includes(needle) || c.jid.toLowerCase().includes(needle)
+      (c) =>
+        (c.name ?? "").toLowerCase().includes(needle) ||
+        c.jid.toLowerCase().includes(needle) ||
+        (c.last_preview?.content ?? "").toLowerCase().includes(needle)
     );
   }, [q, chats]);
 
   return (
-    <aside className="md:border-r border-zinc-800 flex flex-col h-full">
-      <div className="p-3 border-b border-zinc-800 flex flex-col gap-2">
+    <aside className="md:border-r border-[var(--color-line)] flex flex-col h-full bg-[var(--color-surface)]">
+      <div className="px-4 pt-4 pb-3 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <Link href="/" className="text-sm font-semibold text-zinc-200 hover:text-white truncate">
-            WhatsApp viewer
+          <Link href="/" className="flex items-center gap-2 group min-w-0">
+            <span className="grid place-items-center size-8 rounded-[var(--radius-ctl)] bg-emerald-400/15 text-emerald-300">
+              <WhatsappLogo size={18} weight="fill" />
+            </span>
+            <span className="text-[15px] font-semibold tracking-tight text-zinc-100 truncate">Chats</span>
           </Link>
           {onCollapse && (
             <button
               onClick={onCollapse}
-              className="hidden md:block shrink-0 text-xs px-1.5 py-0.5 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+              className="hidden md:grid place-items-center size-8 rounded-[var(--radius-ctl)] text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors"
               title="Hide chat list"
+              aria-label="Hide chat list"
             >
-              «
+              <CaretDoubleLeft size={16} />
             </button>
           )}
         </div>
-        <nav className="flex items-center gap-1 flex-wrap">
-          {[
-            { href: "/needs-reply", label: "Reply" },
-            { href: "/contacts", label: "People" },
-            { href: "/drops", label: "Drops" },
-            { href: "/iluxury", label: "iLuxury" },
-            { href: "/stats", label: "Stats" },
-            { href: "/insights", label: "Insights" },
-            { href: "/sql", label: "SQL" },
-          ].map((nav) => (
-            <Link
-              key={nav.href}
-              href={nav.href}
-              className={`text-xs px-2 py-0.5 rounded border ${
-                pathname.startsWith(nav.href.split("/").slice(0, 2).join("/"))
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
-              }`}
+
+        <label className="relative block">
+          <MagnifyingGlass
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+          />
+          <input
+            type="search"
+            aria-label="Search chats"
+            placeholder="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="w-full h-10 pl-9 pr-9 rounded-[var(--radius-ctl)] bg-[var(--color-surface-2)] border border-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-400/40 focus:bg-[var(--color-surface-3)] transition-colors [&::-webkit-search-cancel-button]:hidden"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center size-6 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/10"
             >
-              {nav.label}
-            </Link>
-          ))}
+              <X size={12} />
+            </button>
+          )}
+        </label>
+
+        <nav className="flex gap-1 overflow-x-auto -mx-1 px-1 pb-0.5 pr-6 [scrollbar-width:none] [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)]">
+          {NAV.map(({ href, label, icon: Icon }) => {
+            const active = pathname.startsWith(href.split("/").slice(0, 2).join("/"));
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[13px] transition-colors ${
+                  active
+                    ? "bg-emerald-400/15 text-emerald-300"
+                    : "text-zinc-400 hover:text-zinc-100 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)]"
+                }`}
+              >
+                <Icon size={14} weight={active ? "fill" : "regular"} />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
-        <input
-          type="search"
-          placeholder="Search chats…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-zinc-600"
-        />
       </div>
-      <ul className="overflow-y-auto flex-1">
+
+      <ul className="overflow-y-auto flex-1 px-2 pb-3">
         {filtered.map((c) => {
           const href = `/chat/${encodeURIComponent(c.jid)}`;
           const active = pathname === href;
+          const name = c.name || c.jid;
           return (
             <li key={c.jid}>
               <Link
                 href={href}
-                className={`block px-3 py-2 border-b border-zinc-900 hover:bg-zinc-900 ${
-                  active ? "bg-zinc-900" : ""
+                className={`relative flex items-center gap-3 px-2.5 py-2.5 rounded-[12px] transition-colors ${
+                  active ? "bg-[var(--color-surface-3)]" : "hover:bg-white/[0.03]"
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium text-zinc-200">
-                    {c.name || c.jid}
-                  </span>
-                  {/* Depends on Date.now(): server and client can straddle a minute boundary. */}
-                  <span className="shrink-0 text-xs text-zinc-500" suppressHydrationWarning>
-                    {relativeTime(c.last_message_time)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
-                  <span>{c.is_group ? "group" : "dm"}</span>
-                  <span>·</span>
-                  <span>{c.message_count.toLocaleString()} msgs</span>
+                {active && (
+                  <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-emerald-400" />
+                )}
+                <Avatar name={name} seed={c.jid} group={c.is_group} size={44} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-[15px] font-medium text-zinc-100">{name}</span>
+                    {/* Depends on Date.now(): server and client can straddle a minute boundary. */}
+                    <span className="shrink-0 text-xs text-zinc-500 tabular-nums" suppressHydrationWarning>
+                      {listTime(c.last_message_time)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[13px] text-zinc-500">
+                    <Preview p={c.last_preview} />
+                  </div>
                 </div>
               </Link>
             </li>
           );
         })}
         {filtered.length === 0 && (
-          <li className="p-4 text-sm text-zinc-500">No chats match “{q}”.</li>
+          <li className="px-4 py-10 text-center text-sm text-zinc-500">
+            Nothing matches <span className="text-zinc-300">&ldquo;{q}&rdquo;</span>
+          </li>
         )}
       </ul>
     </aside>

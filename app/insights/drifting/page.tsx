@@ -20,10 +20,10 @@ export default async function DriftingPage({
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Drifting relationships</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Drifting relationships</h1>
             <p className="text-xs text-zinc-500">
               {rows.length} DM{rows.length === 1 ? "" : "s"} where message volume in the last{" "}
               {windowDays} days dropped &gt;50% from the prior {windowDays} days.
@@ -35,10 +35,10 @@ export default async function DriftingPage({
                 <Link
                   key={w}
                   href={`/insights/drifting?window=${w}`}
-                  className={`px-2 py-1 rounded border ${
+                  className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                     w === windowDays
                       ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                      : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                      : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   {w}d
@@ -59,7 +59,7 @@ export default async function DriftingPage({
         ) : (
           <ul className="flex flex-col gap-2">
             {rows.map((r) => (
-              <li key={r.chat_jid} className="border border-zinc-800 rounded-lg bg-zinc-950 p-3">
+              <li key={r.chat_jid} className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-3">
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <Link
                     href={`/chat/${encodeURIComponent(r.chat_jid)}`}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
+import { CaretDoubleRight, CaretLeft } from "@phosphor-icons/react";
 import type { ChatRow } from "@/lib/db";
 import Sidebar from "@/components/Sidebar";
 
@@ -80,24 +81,29 @@ export default function AppShell({
           onPointerDown={startDrag}
           onDoubleClick={resetWidth}
           title="Drag to resize · double-click to reset"
-          className={`hidden md:block absolute top-0 -right-1 w-2 h-full cursor-col-resize z-30 hover:bg-emerald-500/30 ${
-            dragging ? "bg-emerald-500/40" : ""
+          className={`hidden md:block absolute top-0 -right-1 w-2 h-full cursor-col-resize z-30 hover:bg-emerald-400/25 ${
+            dragging ? "bg-emerald-400/40" : ""
           }`}
         />
       </div>
       <main className={`${isHome ? "hidden" : "flex"} md:flex flex-col min-w-0 min-h-0 h-dvh`}>
-        <div className="md:hidden shrink-0 border-b border-zinc-800 px-3 py-2">
-          <Link href="/" className="text-sm text-emerald-400">
-            ← Chats
+        <div className="md:hidden shrink-0 border-b border-[var(--color-line)] px-2 py-1.5 bg-[var(--color-surface)]">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 h-9 px-2 rounded-[var(--radius-ctl)] text-sm font-medium text-emerald-300 active:bg-white/5"
+          >
+            <CaretLeft size={16} weight="bold" />
+            Chats
           </Link>
         </div>
         {collapsed && (
           <button
             onClick={() => setCollapsedPersist(false)}
-            className="hidden md:block shrink-0 text-left border-b border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-100"
+            className="hidden md:inline-flex shrink-0 items-center gap-1.5 self-start m-2 h-8 px-3 rounded-full bg-[var(--color-surface-2)] text-[13px] text-zinc-300 hover:text-zinc-100 hover:bg-[var(--color-surface-3)] transition-colors"
             title="Show chat list"
           >
-            » Chats
+            <CaretDoubleRight size={14} />
+            Chats
           </button>
         )}
         <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>

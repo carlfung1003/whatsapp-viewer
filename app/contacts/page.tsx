@@ -18,8 +18,8 @@ export default async function ContactsPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
-        <h1 className="text-lg font-semibold text-zinc-100">Contacts</h1>
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md sticky top-0 z-10">
+        <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Contacts</h1>
         <p className="text-xs text-zinc-500">
           {contacts.length} senders observed across all chats. Click into one to see their messages
           everywhere — DMs and groups combined.
@@ -31,7 +31,7 @@ export default async function ContactsPage() {
           {contacts.map((c) => (
             <li
               key={c.key}
-              className="border border-zinc-800 rounded-lg bg-zinc-950 p-3 hover:bg-zinc-900"
+              className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-3 hover:bg-[var(--color-surface-2)]"
             >
               <Link href={`/contact/${encodeURIComponent(c.key)}`} className="block">
                 <div className="flex items-start justify-between gap-3 mb-1">

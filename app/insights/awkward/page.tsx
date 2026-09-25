@@ -29,10 +29,10 @@ export default async function AwkwardPage({
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Awkwardness detector</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Awkwardness detector</h1>
             <p className="text-xs text-zinc-500">
               {moments.length} moment{moments.length === 1 ? "" : "s"} where reply rhythm hit a wall ≥{" "}
               {fmtHours(silenceHours)} (≥5× this chat&apos;s normal cadence).
@@ -44,10 +44,10 @@ export default async function AwkwardPage({
                 <Link
                   key={h}
                   href={`/insights/awkward?silence=${h}`}
-                  className={`px-2 py-1 rounded border ${
+                  className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                     h === silenceHours
                       ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                      : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                      : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   {fmtHours(h)}
@@ -68,7 +68,7 @@ export default async function AwkwardPage({
         ) : (
           <ul className="flex flex-col gap-2">
             {moments.map((m) => (
-              <li key={`${m.chat_jid}-${m.message_id}`} className="border border-zinc-800 rounded-lg bg-zinc-950 p-3">
+              <li key={`${m.chat_jid}-${m.message_id}`} className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-3">
                 <div className="flex items-center justify-between gap-3 mb-1.5">
                   <Link
                     href={`/chat/${encodeURIComponent(m.chat_jid)}`}

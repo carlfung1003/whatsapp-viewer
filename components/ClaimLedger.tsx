@@ -53,8 +53,8 @@ function ItemRow({
   const hasClaimer = !!item.claimer_reactor;
   return (
     <div
-      className={`flex items-center gap-3 p-2 rounded border ${
-        hasClaimer ? "border-emerald-900 bg-emerald-950/20" : "border-zinc-800 bg-zinc-900"
+      className={`flex items-center gap-3 p-2 rounded-[var(--radius-ctl)] border ${
+        hasClaimer ? "border-emerald-900 bg-emerald-950/20" : "border-[var(--color-line)] bg-[var(--color-surface-2)]"
       }`}
     >
       <div className="w-16 h-16 shrink-0">
@@ -106,11 +106,11 @@ export default function ClaimLedger({ drops, chatJid }: { drops: LedgerDrop[]; c
       {drops.map((d, i) => {
         const open = expandedIdx === i;
         return (
-          <div key={i} className="border border-zinc-800 rounded-lg bg-zinc-950">
+          <div key={i} className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950">
             <button
               type="button"
               onClick={() => setExpandedIdx(open ? null : i)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-900 rounded-t-lg"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--color-surface-2)] rounded-t-lg"
             >
               <div className="text-left">
                 <div className="text-sm font-semibold text-zinc-100">

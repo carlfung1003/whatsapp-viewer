@@ -52,7 +52,7 @@ export default function TopicGraph({ days }: { days: number }) {
           type="button"
           onClick={() => load(true)}
           disabled={loading}
-          className="text-xs px-3 py-1.5 rounded border border-emerald-700 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/60 disabled:opacity-50"
+          className="text-xs px-3 py-1.5 rounded-[var(--radius-ctl)] border border-emerald-700 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/60 disabled:opacity-50"
         >
           {loading ? "Clustering…" : data ? "↻ Re-cluster" : "✦ Cluster topics"}
         </button>
@@ -73,7 +73,7 @@ export default function TopicGraph({ days }: { days: number }) {
       {data && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {data.topics.map((t, i) => (
-            <div key={i} className="border border-zinc-800 rounded-lg bg-zinc-950 p-4">
+            <div key={i} className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-4">
               <h3 className="text-base font-semibold text-emerald-300 mb-1">{t.topic}</h3>
               <p className="text-xs text-zinc-500 mb-3">{t.description}</p>
               <div className="flex flex-wrap gap-1.5">
@@ -81,7 +81,7 @@ export default function TopicGraph({ days }: { days: number }) {
                   <Link
                     key={c.chat_jid}
                     href={`/chat/${encodeURIComponent(c.chat_jid)}`}
-                    className="text-xs px-2 py-0.5 rounded-full border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+                    className="text-xs px-2 py-0.5 rounded-full border border-zinc-700 bg-[var(--color-surface-2)] text-zinc-200 hover:bg-[var(--color-surface-3)]"
                   >
                     {c.name}
                   </Link>

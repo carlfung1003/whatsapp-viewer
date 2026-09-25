@@ -11,7 +11,7 @@ export default async function WordsPage({
 }) {
   const sp = await searchParams;
   const chatJid = sp.chat ?? "";
-  const chats = listChats(100);
+  const chats = listChats(100, false);
   const selected = chats.find((c) => c.jid === chatJid);
   const words = chatJid ? wordFrequencyForChat(chatJid, 40) : [];
   const emojis = chatJid ? emojiFrequencyForChat(chatJid, 24) : [];
@@ -19,10 +19,10 @@ export default async function WordsPage({
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-zinc-100">Words + emojis</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Words + emojis</h1>
             <p className="text-xs text-zinc-500">
               {selected
                 ? `Top vocab in ${selected.name ?? chatJid}`
@@ -37,7 +37,7 @@ export default async function WordsPage({
           <select
             name="chat"
             defaultValue={chatJid}
-            className="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm text-zinc-200 focus:outline-none focus:border-zinc-600 max-w-md w-full"
+            className="bg-[var(--color-surface-2)] border border-[var(--color-line)] rounded px-2 py-1 text-sm text-zinc-200 focus:outline-none focus:border-zinc-600 max-w-md w-full"
           >
             <option value="">— pick a chat —</option>
             {chats.map((c) => (
@@ -67,7 +67,7 @@ export default async function WordsPage({
                 {words.map((w) => (
                   <li key={w.word} className="flex items-center gap-2 text-sm">
                     <span className="w-24 truncate text-zinc-200">{w.word}</span>
-                    <div className="flex-1 h-3 bg-zinc-900 rounded overflow-hidden">
+                    <div className="flex-1 h-3 bg-[var(--color-surface-2)] rounded overflow-hidden">
                       <div
                         className="bg-emerald-700 h-full"
                         style={{ width: `${(w.count / wordMax) * 100}%` }}
@@ -91,7 +91,7 @@ export default async function WordsPage({
                 {emojis.map((e) => (
                   <li
                     key={e.emoji}
-                    className="border border-zinc-800 rounded p-2 bg-zinc-950 flex items-center gap-3"
+                    className="border border-[var(--color-line)] rounded p-2 bg-zinc-950 flex items-center gap-3"
                   >
                     <span className="text-2xl">{e.emoji}</span>
                     <div className="flex-1 text-xs text-zinc-400">

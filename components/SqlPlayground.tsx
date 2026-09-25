@@ -151,8 +151,8 @@ export default function SqlPlayground() {
 
   return (
     <div className="h-full grid md:grid-cols-[280px_1fr]">
-      <aside className="border-r border-zinc-800 overflow-y-auto">
-        <div className="p-3 border-b border-zinc-800">
+      <aside className="border-r border-[var(--color-line)] overflow-y-auto">
+        <div className="p-3 border-b border-[var(--color-line)]">
           <h2 className="text-xs uppercase tracking-wide text-zinc-500">Sample queries</h2>
         </div>
         <ul className="text-sm">
@@ -161,7 +161,7 @@ export default function SqlPlayground() {
               <button
                 type="button"
                 onClick={() => setQuery(s.sql)}
-                className="block w-full text-left px-3 py-2 border-b border-zinc-900 hover:bg-zinc-900 text-zinc-300"
+                className="block w-full text-left px-3 py-2 border-b border-zinc-900 hover:bg-[var(--color-surface-2)] text-zinc-300"
               >
                 {s.label}
               </button>
@@ -170,7 +170,7 @@ export default function SqlPlayground() {
         </ul>
         {history.length > 0 && (
           <>
-            <div className="p-3 border-b border-zinc-800 border-t mt-2">
+            <div className="p-3 border-b border-[var(--color-line)] border-t mt-2">
               <h2 className="text-xs uppercase tracking-wide text-zinc-500">Recent</h2>
             </div>
             <ul className="text-xs">
@@ -179,7 +179,7 @@ export default function SqlPlayground() {
                   <button
                     type="button"
                     onClick={() => setQuery(q)}
-                    className="block w-full text-left px-3 py-2 border-b border-zinc-900 hover:bg-zinc-900 text-zinc-400 font-mono truncate"
+                    className="block w-full text-left px-3 py-2 border-b border-zinc-900 hover:bg-[var(--color-surface-2)] text-zinc-400 font-mono truncate"
                     title={q}
                   >
                     {q.split("\n")[0].slice(0, 60)}
@@ -192,13 +192,13 @@ export default function SqlPlayground() {
       </aside>
 
       <div className="flex flex-col overflow-hidden">
-        <div className="border-b border-zinc-800 p-3 flex flex-col gap-2">
+        <div className="border-b border-[var(--color-line)] p-3 flex flex-col gap-2">
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             spellCheck={false}
-            className="w-full h-40 bg-zinc-950 border border-zinc-800 rounded p-2 text-sm font-mono focus:outline-none focus:border-zinc-600"
+            className="w-full h-40 bg-[var(--color-surface)] border border-[var(--color-line)] rounded p-2 text-sm font-mono focus:outline-none focus:border-zinc-600"
           />
           <div className="flex items-center gap-3">
             <button
@@ -227,13 +227,13 @@ export default function SqlPlayground() {
 
         <div className="flex-1 overflow-auto">
           {result?.error && (
-            <div className="p-4 text-sm text-red-300 bg-red-950/20 m-3 rounded border border-red-900 font-mono whitespace-pre-wrap">
+            <div className="p-4 text-sm text-red-300 bg-red-950/20 m-3 rounded-[var(--radius-ctl)] border border-red-900 font-mono whitespace-pre-wrap">
               {result.error}
             </div>
           )}
           {hasResults && (
             <table className="text-xs w-full">
-              <thead className="sticky top-0 bg-zinc-950 border-b border-zinc-800">
+              <thead className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-line)]">
                 <tr>
                   {cols.map((c) => (
                     <th key={c} className="text-left px-3 py-2 font-medium text-zinc-300 border-r border-zinc-900">
@@ -244,7 +244,7 @@ export default function SqlPlayground() {
               </thead>
               <tbody>
                 {result!.rows!.map((row, i) => (
-                  <tr key={i} className="border-b border-zinc-900 hover:bg-zinc-900/50">
+                  <tr key={i} className="border-b border-zinc-900 hover:bg-[var(--color-surface-2)]/50">
                     {cols.map((c) => (
                       <td key={c} className="px-3 py-1 align-top border-r border-zinc-900 font-mono">
                         {renderCell(row[c])}

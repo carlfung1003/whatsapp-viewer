@@ -8,7 +8,7 @@ export default function SimulatorPage() {
   // DMs only; need at least a handful of messages to give Claude a voice sample.
   // Sort: contacts with a real (non-numeric) name first, then by recency.
   const looksNumeric = (s: string | null) => !s || /^[+\d]+$/.test(s);
-  const dms = listChats(500)
+  const dms = listChats(500, false)
     .filter((c) => !c.is_group)
     .filter((c) => c.message_count >= 5)
     .sort((a, b) => {
@@ -20,10 +20,10 @@ export default function SimulatorPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Conversation simulator</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Conversation simulator</h1>
             <p className="text-xs text-zinc-500">
               Pick a contact, type a draft, get Claude&apos;s prediction of how they&apos;d respond — based on their actual message history with you.
             </p>

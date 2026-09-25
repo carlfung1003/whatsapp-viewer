@@ -25,7 +25,7 @@ export default function SnapshotPicker({ chats }: { chats: ChatRow[] }) {
             setChatJid(e.target.value);
             setCacheBust((v) => v + 1);
           }}
-          className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-sm text-zinc-100"
+          className="flex-1 bg-[var(--color-surface-2)] border border-[var(--color-line)] rounded px-2 py-1.5 text-sm text-zinc-100"
         >
           {chats.map((c) => (
             <option key={c.jid} value={c.jid}>
@@ -36,28 +36,28 @@ export default function SnapshotPicker({ chats }: { chats: ChatRow[] }) {
         <button
           type="button"
           onClick={() => setCacheBust((v) => v + 1)}
-          className="text-xs px-3 py-1.5 rounded border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          className="text-xs px-3 py-1.5 rounded-[var(--radius-ctl)] border border-zinc-700 text-zinc-300 hover:bg-[var(--color-surface-3)]"
         >
           ↻ Refresh
         </button>
         <a
           href={src}
           download={`whatsapp-snapshot.png`}
-          className="text-xs px-3 py-1.5 rounded border border-emerald-700 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/60"
+          className="text-xs px-3 py-1.5 rounded-[var(--radius-ctl)] border border-emerald-700 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/60"
         >
           ⬇ PNG
         </a>
         <button
           type="button"
           onClick={copyImageUrl}
-          className="text-xs px-3 py-1.5 rounded border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          className="text-xs px-3 py-1.5 rounded-[var(--radius-ctl)] border border-zinc-700 text-zinc-300 hover:bg-[var(--color-surface-3)]"
         >
           Copy URL
         </button>
       </div>
 
       {chatJid && (
-        <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
+        <div className="border border-[var(--color-line)] rounded-[14px] overflow-hidden bg-zinc-950">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={src}

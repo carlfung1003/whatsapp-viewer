@@ -16,7 +16,7 @@ export default async function ILuxuryPage({
   const drops = listLedgerDrops(chatJid, days);
 
   // Provide a quick picker among iLuxury-named chats
-  const allChats = listChats(500);
+  const allChats = listChats(500, false);
   const iluxuryChats = allChats.filter((c) =>
     (c.name ?? "").toLowerCase().includes("iluxury") || (c.name ?? "").toLowerCase().includes("luxury")
   );
@@ -34,10 +34,10 @@ export default async function ILuxuryPage({
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-zinc-100 truncate">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50 truncate">
               iLuxury claim ledger
             </h1>
             <p className="text-xs text-zinc-500">
@@ -58,10 +58,10 @@ export default async function ILuxuryPage({
                 <Link
                   key={d}
                   href={`/iluxury?chat=${encodeURIComponent(chatJid)}&days=${d}`}
-                  className={`px-2 py-1 rounded border ${
+                  className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                     d === days
                       ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                      : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                      : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   {d}d
@@ -76,10 +76,10 @@ export default async function ILuxuryPage({
               <Link
                 key={c.jid}
                 href={`/iluxury?chat=${encodeURIComponent(c.jid)}&days=${days}`}
-                className={`px-2 py-1 rounded border ${
+                className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                   c.jid === chatJid
                     ? "bg-emerald-700/40 border-emerald-700 text-zinc-100"
-                    : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+                    : "border-[var(--color-line)] bg-[var(--color-surface-2)] text-zinc-300 hover:bg-[var(--color-surface-3)]"
                 }`}
               >
                 {c.name ?? c.jid}

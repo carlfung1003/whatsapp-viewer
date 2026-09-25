@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
+    "@phosphor-icons/react": "^2.1.10",
     "better-sqlite3": "^12.10.0",
     "next": "16.2.6",
     "react": "19.2.4",

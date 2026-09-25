@@ -62,10 +62,10 @@ export default function ContactTimeline({
           <button
             type="button"
             onClick={() => setFilterJid(null)}
-            className={`px-2 py-1 rounded border ${
+            className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
               filterJid === null
                 ? "bg-emerald-700/40 border-emerald-700 text-zinc-100"
-                : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
+                : "border-[var(--color-line)] bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-zinc-300"
             }`}
           >
             All · {messages.length}
@@ -78,10 +78,10 @@ export default function ContactTimeline({
                 type="button"
                 onClick={() => setFilterJid(active ? null : c.jid)}
                 title={c.jid}
-                className={`px-2 py-1 rounded border ${
+                className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                   active
                     ? "bg-emerald-700/40 border-emerald-700 text-zinc-100"
-                    : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
+                    : "border-[var(--color-line)] bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-zinc-300"
                 }`}
               >
                 {c.is_group ? "👥" : "💬"} {c.name ?? c.jid.slice(0, 12)} · {c.count}
@@ -105,7 +105,7 @@ export default function ContactTimeline({
           placeholder="Search this contact's messages…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-zinc-600"
+          className="w-full bg-[var(--color-surface-2)] border border-[var(--color-line)] rounded px-2 py-1 text-sm focus:outline-none focus:border-zinc-600"
         />
         {(q || filterJid) && (
           <div className="mt-1 text-[10px] text-zinc-500">
@@ -131,7 +131,7 @@ export default function ContactTimeline({
                   {msgs.map((m) => (
                     <li
                       key={`${m.chat_jid}-${m.id}`}
-                      className="rounded border border-zinc-800 bg-zinc-900 p-3"
+                      className="rounded-[var(--radius-ctl)] border border-[var(--color-line)] bg-[var(--color-surface-2)] p-3"
                     >
                       <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
                         <Link

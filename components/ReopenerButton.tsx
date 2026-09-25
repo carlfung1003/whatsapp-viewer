@@ -45,7 +45,7 @@ export default function ReopenerButton({ chatJid }: { chatJid: string }) {
           type="button"
           onClick={compose}
           disabled={loading}
-          className="text-xs px-2 py-0.5 rounded border border-emerald-800 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 disabled:opacity-50"
+          className="text-xs px-2 py-0.5 rounded-[var(--radius-ctl)] border border-emerald-800 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 disabled:opacity-50"
         >
           {loading ? "Composing…" : text ? "↻ Regenerate" : "✦ Compose re-opener"}
         </button>
@@ -53,7 +53,7 @@ export default function ReopenerButton({ chatJid }: { chatJid: string }) {
           <button
             type="button"
             onClick={copy}
-            className="text-xs px-2 py-0.5 rounded border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            className="text-xs px-2 py-0.5 rounded-[var(--radius-ctl)] border border-zinc-700 text-zinc-300 hover:bg-[var(--color-surface-3)]"
           >
             {copied ? "✓ Copied" : "Copy"}
           </button>

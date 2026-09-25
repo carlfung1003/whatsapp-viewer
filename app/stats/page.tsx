@@ -34,10 +34,10 @@ export default async function StatsPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Stats</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Stats</h1>
             <p className="text-xs text-zinc-500">
               {totals.total_messages.toLocaleString()} total messages · {totals.total_reactions.toLocaleString()} reactions
               · {totals.total_images.toLocaleString()} images · {totals.total_chats} chats ({totals.total_active_chats_7d} active in 7d)
@@ -48,10 +48,10 @@ export default async function StatsPage({
               <Link
                 key={d}
                 href={`/stats?days=${d}`}
-                className={`px-2 py-1 rounded border ${
+                className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                   d === days
                     ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                    : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 {d}d
@@ -96,7 +96,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={`border border-zinc-800 rounded-lg bg-zinc-950 p-4 ${className}`}>
+    <div className={`border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-4 ${className}`}>
       <h2 className="text-xs uppercase tracking-wide text-zinc-500 mb-3">{title}</h2>
       {children}
     </div>

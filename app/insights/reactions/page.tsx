@@ -18,10 +18,10 @@ export default async function ReactionsPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Reaction analytics</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Reaction analytics</h1>
             <p className="text-xs text-zinc-500">
               Your most-reacted-to messages, and which emojis you give vs receive most.
             </p>
@@ -43,11 +43,11 @@ export default async function ReactionsPage() {
               {topMessages.map((m) => (
                 <li
                   key={`${m.chat_jid}-${m.message_id}`}
-                  className="border border-zinc-800 rounded-lg bg-zinc-950 p-3"
+                  className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-3"
                 >
                   <Link
                     href={`/chat/${encodeURIComponent(m.chat_jid)}`}
-                    className="block hover:bg-zinc-900 rounded -m-1 p-1"
+                    className="block hover:bg-[var(--color-surface-2)] rounded -m-1 p-1"
                   >
                     <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
                       <span className="truncate">{m.chat_name ?? m.chat_jid}</span>
@@ -78,20 +78,20 @@ export default async function ReactionsPage() {
                 return (
                   <li
                     key={t.emoji}
-                    className="border border-zinc-800 rounded-lg bg-zinc-950 p-2"
+                    className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-2"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl shrink-0">{t.emoji}</span>
                       <div className="flex-1 flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="w-16 text-emerald-400 tabular-nums">given {t.given}</span>
-                          <div className="flex-1 h-2 bg-zinc-900 rounded overflow-hidden">
+                          <div className="flex-1 h-2 bg-[var(--color-surface-2)] rounded overflow-hidden">
                             <div className="bg-emerald-700 h-full" style={{ width: `${givenPct}%` }} />
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="w-16 text-amber-400 tabular-nums">recv {t.received}</span>
-                          <div className="flex-1 h-2 bg-zinc-900 rounded overflow-hidden">
+                          <div className="flex-1 h-2 bg-[var(--color-surface-2)] rounded overflow-hidden">
                             <div className="bg-amber-700 h-full" style={{ width: `${recvPct}%` }} />
                           </div>
                         </div>

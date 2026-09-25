@@ -47,7 +47,7 @@ export default function Simulator({ dms }: { dms: ChatRow[] }) {
             setPrediction(null);
             setPartner(null);
           }}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-sm text-zinc-100"
+          className="w-full bg-[var(--color-surface-2)] border border-[var(--color-line)] rounded px-2 py-1.5 text-sm text-zinc-100"
         >
           {dms.map((c) => (
             <option key={c.jid} value={c.jid}>
@@ -63,7 +63,7 @@ export default function Simulator({ dms }: { dms: ChatRow[] }) {
           onChange={(e) => setDraft(e.target.value)}
           rows={4}
           placeholder="Type what you're thinking of sending…"
-          className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 font-sans resize-y"
+          className="w-full bg-[var(--color-surface-2)] border border-[var(--color-line)] rounded px-3 py-2 text-sm text-zinc-100 font-sans resize-y"
         />
       </div>
       <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export default function Simulator({ dms }: { dms: ChatRow[] }) {
         {error && <span className="text-xs text-red-400">{error}</span>}
       </div>
       {prediction !== null && (
-        <div className="border border-emerald-900 bg-emerald-950/20 rounded-lg p-4">
+        <div className="border border-emerald-900 bg-emerald-950/20 rounded-[14px] p-4">
           <div className="text-xs text-emerald-400 mb-2 uppercase tracking-wide">
             {partner ?? "they"} would probably say
           </div>

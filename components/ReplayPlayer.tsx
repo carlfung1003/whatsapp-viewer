@@ -74,7 +74,7 @@ export default function ReplayPlayer({ messages }: { messages: ReplayMessage[] }
   return (
     <div className="flex flex-col h-full gap-3">
       {/* Controls */}
-      <div className="flex items-center gap-3 px-4 py-2 border border-zinc-800 rounded-lg bg-zinc-950">
+      <div className="flex items-center gap-3 px-4 py-2 border border-[var(--color-line)] rounded-[14px] bg-zinc-950">
         <button
           type="button"
           onClick={() => {
@@ -92,10 +92,10 @@ export default function ReplayPlayer({ messages }: { messages: ReplayMessage[] }
               key={s}
               type="button"
               onClick={() => setSpeed(s)}
-              className={`px-2 py-1 rounded border ${
+              className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                 s === speed
                   ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                  : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
               }`}
             >
               {s}×
@@ -122,7 +122,7 @@ export default function ReplayPlayer({ messages }: { messages: ReplayMessage[] }
       </div>
 
       {/* Message stream */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto border border-zinc-800 rounded-lg bg-zinc-950 p-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-4">
         <div className="flex flex-col gap-2">
           {visibleMessages.map((m) => {
             const visibleReactions = m.reactions.filter(
@@ -131,10 +131,10 @@ export default function ReplayPlayer({ messages }: { messages: ReplayMessage[] }
             return (
               <div
                 key={m.id}
-                className={`max-w-[80%] rounded-lg px-3 py-1.5 ${
+                className={`max-w-[80%] rounded-[14px] px-3 py-1.5 ${
                   m.is_from_me
                     ? "self-end bg-emerald-900/60 border border-emerald-800"
-                    : "self-start bg-zinc-900 border border-zinc-800"
+                    : "self-start bg-[var(--color-surface-2)] border border-[var(--color-line)]"
                 } animate-[fadeIn_0.3s_ease-out]`}
               >
                 {!m.is_from_me && (

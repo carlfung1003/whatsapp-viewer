@@ -20,10 +20,10 @@ export default function BirthdaysPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Birthdays</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Birthdays</h1>
             <p className="text-xs text-zinc-500">
               {birthdays.length} inferred — {dmCount} from DMs · {groupCount} from groups.
               Detection scans for &ldquo;happy birthday&rdquo;, 🎂, 生日快樂, HBD across all chats.
@@ -33,7 +33,7 @@ export default function BirthdaysPage() {
             <a
               href="/api/birthdays.ics"
               download
-              className="text-xs px-3 py-1.5 rounded border border-emerald-700 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/60"
+              className="text-xs px-3 py-1.5 rounded-[var(--radius-ctl)] border border-emerald-700 bg-emerald-900/40 text-emerald-200 hover:bg-emerald-800/60"
             >
               ⬇ .ics
             </a>
@@ -56,8 +56,8 @@ export default function BirthdaysPage() {
               return (
                 <li
                   key={`${b.chat_jid}-${b.month}-${b.day}-${b.recipient_jid ?? i}`}
-                  className={`border rounded-lg p-3 flex items-center gap-4 ${
-                    upcoming ? "border-amber-800 bg-amber-950/20" : "border-zinc-800 bg-zinc-950"
+                  className={`border rounded-[14px] p-3 flex items-center gap-4 ${
+                    upcoming ? "border-amber-800 bg-amber-950/20" : "border-[var(--color-line)] bg-zinc-950"
                   }`}
                 >
                   <div className="flex flex-col items-center justify-center w-16 shrink-0">

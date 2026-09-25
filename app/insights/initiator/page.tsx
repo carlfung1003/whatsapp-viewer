@@ -8,10 +8,10 @@ export default async function InitiatorPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Initiator vs responder</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Initiator vs responder</h1>
             <p className="text-xs text-zinc-500">
               A "start" = first message after a 6+ hour silence. Shows what share of conversations you
               kick off vs they do.
@@ -32,7 +32,7 @@ export default async function InitiatorPage() {
               return (
                 <li
                   key={r.chat_jid}
-                  className="border border-zinc-800 rounded-lg bg-zinc-950 p-3"
+                  className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-3"
                 >
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <Link
@@ -45,7 +45,7 @@ export default async function InitiatorPage() {
                       {r.total_starts} starts
                     </span>
                   </div>
-                  <div className="h-2 bg-zinc-900 rounded overflow-hidden flex">
+                  <div className="h-2 bg-[var(--color-surface-2)] rounded overflow-hidden flex">
                     <div className="bg-emerald-700" style={{ width: `${myPct}%` }} />
                     <div className="bg-amber-700" style={{ width: `${100 - myPct}%` }} />
                   </div>

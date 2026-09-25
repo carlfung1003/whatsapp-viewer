@@ -7,10 +7,10 @@ export default async function ReplyLatencyPage() {
   const rows = replyLatencyPerContact(5);
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Reply latency</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Reply latency</h1>
             <p className="text-xs text-zinc-500">
               Median time you take to reply, per DM (≥5 reply samples). Sorted fastest first.
             </p>
@@ -27,7 +27,7 @@ export default async function ReplyLatencyPage() {
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-zinc-500 border-b border-zinc-800">
+            <thead className="text-xs uppercase tracking-wide text-zinc-500 border-b border-[var(--color-line)]">
               <tr>
                 <th className="text-left py-2 font-medium">Contact</th>
                 <th className="text-right py-2 font-medium">Median</th>
@@ -37,7 +37,7 @@ export default async function ReplyLatencyPage() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.chat_jid} className="border-b border-zinc-900 hover:bg-zinc-900/40">
+                <tr key={r.chat_jid} className="border-b border-zinc-900 hover:bg-[var(--color-surface-2)]/40">
                   <td className="py-2">
                     <Link
                       href={`/chat/${encodeURIComponent(r.chat_jid)}`}

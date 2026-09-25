@@ -87,7 +87,34 @@ export type ChatRow = {
   last_message_time: string | null;
   message_count: number;
   is_group: boolean;
+  last_preview?: LastPreview | null;
 };
+
+export type LastPreview = {
+  content: string | null;
+  media_type: string | null;
+  is_from_me: boolean;
+  sender_name: string | null;
+};
+
+// Latest message across all LID/PN aliases of a chat, for the sidebar preview.
+function lastPreviewFor(jid: string, isGroup: boolean): LastPreview | null {
+  const aliases = aliasesForChatJid(jid);
+  const row = messagesDb()
+    .prepare(
+      `SELECT content, media_type, is_from_me, sender FROM messages
+       WHERE chat_jid IN (${aliases.map(() => "?").join(",")})
+       ORDER BY timestamp DESC LIMIT 1`
+    )
+    .get(...aliases) as { content: string | null; media_type: string | null; is_from_me: number; sender: string } | undefined;
+  if (!row) return null;
+  return {
+    content: row.content,
+    media_type: row.media_type || null,
+    is_from_me: !!row.is_from_me,
+    sender_name: isGroup && !row.is_from_me ? resolveName(row.sender.split("@")[0]) : null,
+  };
+}
 
 /**
  * Return the set of chat_jid aliases for a DM. WhatsApp's ongoing LID rollout
@@ -122,7 +149,7 @@ function canonicalJid(jid: string): string {
   return aliases.find((j) => j.endsWith("@s.whatsapp.net")) ?? aliases[0];
 }
 
-export function listChats(limit = 50): ChatRow[] {
+export function listChats(limit = 50, withPreview = true): ChatRow[] {
   // Pull more than `limit` so we have headroom to merge LID/PN duplicates without
   // running short. Use MAX(timestamp) FROM messages for real last activity.
   const raw = messagesDb()
@@ -178,7 +205,8 @@ export function listChats(limit = 50): ChatRow[] {
         const resolved = resolveName(r.jid.split("@")[0]);
         if (resolved && resolved !== "(unknown)") displayName = resolved;
       }
-      return { ...r, name: displayName, is_group: r.jid.endsWith("@g.us") };
+      const isGroup = r.jid.endsWith("@g.us");
+      return { ...r, name: displayName, is_group: isGroup, last_preview: withPreview ? lastPreviewFor(r.jid, isGroup) : null };
     });
 }
 
@@ -330,7 +358,7 @@ export type NeedsReplyRow = {
  */
 export function listNeedsReply(hoursMin = 2, limit = 100): NeedsReplyRow[] {
   // For each chat (canonical), find the latest message across all alias jids.
-  const chats = listChats(500);
+  const chats = listChats(500, false);
   const rows: NeedsReplyRow[] = [];
   for (const c of chats) {
     if (c.is_group) continue;

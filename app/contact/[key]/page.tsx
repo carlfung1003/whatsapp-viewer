@@ -27,10 +27,10 @@ export default async function ContactPage({ params }: { params: Promise<{ key: s
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-zinc-100 truncate">{name}</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50 truncate">{name}</h1>
             <p className="text-xs text-zinc-500">
               {messages.length} messages across {chatBreakdown.length} chat
               {chatBreakdown.length === 1 ? "" : "s"} · contact key{" "}

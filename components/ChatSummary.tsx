@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Markdown from "@/components/Markdown";
+import { Sparkle, X } from "@phosphor-icons/react";
 
 type Usage = {
   input_tokens: number;
@@ -93,31 +94,36 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs px-2 py-1 rounded border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
+        className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-ctl)] text-sm font-medium text-emerald-200 bg-emerald-400/15 hover:bg-emerald-400/25 active:scale-[0.97] transition"
         title="Summarize this chat with Claude"
       >
-        ✨ Summarize
+        <Sparkle size={15} weight="fill" />
+        <span className="hidden sm:inline">Summarize</span>
       </button>
     );
   }
 
   return (
-    <div className="basis-full order-last min-w-0 mt-3 pt-3 border-t border-zinc-800">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs uppercase tracking-wide text-zinc-500">AI summary</span>
+    <div className="basis-full order-last min-w-0 mt-2 rounded-[14px] bg-[var(--color-surface)] ring-1 ring-inset ring-white/5 p-3 md:p-4 animate-pop">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200">
+          <Sparkle size={15} weight="fill" className="text-emerald-300" />
+          Ask about this chat
+        </span>
         <button
           type="button"
           onClick={() => {
             setOpen(false);
             setResult(null);
           }}
-          className="ml-auto text-xs text-zinc-500 hover:text-zinc-300"
+          aria-label="Close summary"
+          className="ml-auto grid place-items-center size-8 rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5"
         >
-          close
+          <X size={14} />
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-1 mb-2">
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p}
@@ -128,7 +134,7 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
               run(q);
             }}
             disabled={loading}
-            className="text-xs px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50"
+            className="text-[13px] h-8 px-3 rounded-full bg-[var(--color-surface-2)] text-zinc-300 hover:bg-[var(--color-surface-3)] hover:text-zinc-100 disabled:opacity-50 transition-colors"
           >
             {p}
           </button>
@@ -144,20 +150,20 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
             if (e.key === "Enter") run(question);
           }}
           placeholder="Or ask anything specific…"
-          className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-zinc-600"
+          className="flex-1 min-w-0 h-10 px-3 rounded-[var(--radius-ctl)] bg-[var(--color-surface-2)] border border-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-400/40"
         />
         <button
           type="button"
           onClick={() => run(question)}
           disabled={loading}
-          className="px-3 py-1 rounded bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-sm text-white"
+          className="h-10 px-4 rounded-[var(--radius-ctl)] bg-emerald-400 hover:bg-emerald-300 active:scale-[0.97] disabled:opacity-50 text-sm font-medium text-emerald-950 transition"
         >
           {loading ? "…" : "Ask"}
         </button>
       </div>
 
       {loading && (
-        <div className="mt-3 flex items-center gap-3 p-3 rounded border border-emerald-900/60 bg-emerald-950/20">
+        <div className="mt-3 flex items-center gap-3 p-3 rounded-[var(--radius-ctl)] bg-emerald-400/[0.06] ring-1 ring-inset ring-emerald-400/15">
           <div className="relative">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute inset-0" />
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 relative" />
@@ -167,7 +173,7 @@ export default function ChatSummary({ chatJid }: { chatJid: string }) {
         </div>
       )}
       {result?.error && (
-        <div className="mt-3 p-3 text-sm text-red-300 bg-red-950/20 rounded border border-red-900 font-mono whitespace-pre-wrap">
+        <div className="mt-3 p-3 text-sm text-red-200 bg-red-500/10 rounded-[var(--radius-ctl)] ring-1 ring-inset ring-red-500/25 whitespace-pre-wrap">
           {result.error}
         </div>
       )}

@@ -140,11 +140,11 @@ test("sidebar renders chat names from the DB", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
   // Search input must be present
-  await expect(page.getByPlaceholder("Search chats…")).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search chats" })).toBeVisible();
   // Drops/Stats/SQL nav links must be present
-  await expect(page.getByRole("link", { name: "Drops" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Stats" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "SQL" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Drops", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Stats", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "SQL", exact: true })).toBeVisible();
 });
 
 test("no broken images on the homepage", async ({ page }) => {

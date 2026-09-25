@@ -22,10 +22,10 @@ export default async function NeedsReplyPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Needs reply</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Needs reply</h1>
             <p className="text-xs text-zinc-500">
               {rows.length} DM{rows.length === 1 ? "" : "s"} where they sent the last message
               ≥ {hoursMin}h ago
@@ -36,10 +36,10 @@ export default async function NeedsReplyPage({
               <Link
                 key={h}
                 href={`/needs-reply?hours=${h}`}
-                className={`px-2 py-1 rounded border ${
+                className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                   h === hoursMin
                     ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                    : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 ≥{h}h
@@ -59,7 +59,7 @@ export default async function NeedsReplyPage({
             {rows.map((r) => (
               <li
                 key={r.chat_jid}
-                className="border border-zinc-800 rounded-lg bg-zinc-950 p-3 hover:bg-zinc-900"
+                className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-3 hover:bg-[var(--color-surface-2)]"
               >
                 <Link href={`/chat/${encodeURIComponent(r.chat_jid)}`} className="block">
                   <div className="flex items-start justify-between gap-3 mb-1">

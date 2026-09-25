@@ -13,10 +13,10 @@ export default async function TopicsPage({
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur shrink-0">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Topic graph</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Topic graph</h1>
             <p className="text-xs text-zinc-500">
               Claude clusters your top {days}-day DMs into themes. Cached for 24h.
             </p>
@@ -27,10 +27,10 @@ export default async function TopicsPage({
                 <Link
                   key={d}
                   href={`/insights/topics?days=${d}`}
-                  className={`px-2 py-1 rounded border ${
+                  className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                     d === days
                       ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                      : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                      : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   {d}d

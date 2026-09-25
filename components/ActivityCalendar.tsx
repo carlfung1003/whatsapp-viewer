@@ -13,7 +13,7 @@ function bucket(count: number, max: number): number {
   return 4;
 }
 
-const BUCKET_BG = ["bg-zinc-900", "bg-emerald-950", "bg-emerald-800", "bg-emerald-600", "bg-emerald-400"];
+const BUCKET_BG = ["bg-[var(--color-surface-2)]", "bg-emerald-950", "bg-emerald-800", "bg-emerald-600", "bg-emerald-400"];
 
 export function ActivityCalendar({
   data,

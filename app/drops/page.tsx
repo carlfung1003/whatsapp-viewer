@@ -21,7 +21,7 @@ async function DropCard({ drop }: { drop: CrossChatDrop }) {
     ? Math.round((drop.reaction_count / drop.message_ids.length) * 100)
     : 0;
   return (
-    <li className="border border-zinc-800 rounded-lg bg-zinc-950 p-4 flex flex-col gap-2">
+    <li className="border border-[var(--color-line)] rounded-[14px] bg-zinc-950 p-4 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Link
@@ -65,7 +65,7 @@ async function DropCard({ drop }: { drop: CrossChatDrop }) {
           <ImageTile key={id} chatJid={drop.chat_jid} messageId={id} small />
         ))}
         {drop.message_ids.length > THUMBS_PER_DROP && (
-          <div className="aspect-square rounded border border-zinc-800 bg-zinc-900 flex items-center justify-center text-[10px] text-zinc-500">
+          <div className="aspect-square rounded-[var(--radius-ctl)] border border-[var(--color-line)] bg-[var(--color-surface-2)] flex items-center justify-center text-[10px] text-zinc-500">
             +{drop.message_ids.length - THUMBS_PER_DROP}
           </div>
         )}
@@ -89,10 +89,10 @@ export default async function DropsDashboard({
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-[var(--color-line)] px-6 py-4 bg-[var(--background)]/85 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">Image drops</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-50">Image drops</h1>
             <p className="text-xs text-zinc-500">
               {drops.length} drops · {totalItems} items · {totalReactions} reactions · {totalQuoted} quoted replies · last {days}d
             </p>
@@ -102,10 +102,10 @@ export default async function DropsDashboard({
               <Link
                 key={d}
                 href={`/drops?days=${d}`}
-                className={`px-2 py-1 rounded border ${
+                className={`px-2 py-1 rounded-[var(--radius-ctl)] border ${
                   d === days
                     ? "bg-zinc-800 border-zinc-700 text-zinc-100"
-                    : "border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    : "border-[var(--color-line)] text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 {d}d
