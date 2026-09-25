@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   MagnifyingGlass,
   Microphone,
+  Smiley,
   Sparkle,
   Stack,
   UsersThree,
@@ -38,6 +39,7 @@ const MEDIA_LABEL: Record<string, { label: string; icon: typeof ImageIcon }> = {
   video: { label: "Video", icon: VideoCamera },
   audio: { label: "Voice message", icon: Microphone },
   document: { label: "Document", icon: File },
+  sticker: { label: "Sticker", icon: Smiley },
 };
 
 function Preview({ p }: { p: LastPreview | null | undefined }) {

@@ -85,6 +85,7 @@ export function ImageTile({
   messageId,
   small = false,
   claimed = false,
+  sticker = false,
   timestamp,
   caption,
 }: {
@@ -92,6 +93,7 @@ export function ImageTile({
   messageId: string;
   small?: boolean;
   claimed?: boolean;
+  sticker?: boolean;
   timestamp?: string;
   caption?: string;
 }) {
@@ -102,9 +104,11 @@ export function ImageTile({
   const src = `/api/media/${encodeURIComponent(chatJid)}/${encodeURIComponent(messageId)}?v=2`;
   const close = useCallback(() => setOpen(false), []);
 
-  const box = small
-    ? "aspect-square w-full rounded-[8px]"
-    : "w-[min(280px,70vw)] aspect-[4/3] rounded-[12px]";
+  const box = sticker
+    ? "size-36 rounded-[12px]"
+    : small
+      ? "aspect-square w-full rounded-[8px]"
+      : "w-[min(280px,70vw)] aspect-[4/3] rounded-[12px]";
 
   // Decided on error (not during render): old media is gone from WhatsApp's CDN.
   function onError() {
@@ -137,19 +141,19 @@ export function ImageTile({
         type="button"
         onClick={() => state === "loaded" && setOpen(true)}
         aria-label="Open image"
-        className={`${box} relative overflow-hidden block ${state === "loading" ? "skeleton" : "bg-[var(--color-surface-2)]"} ${
-          claimed ? "ring-2 ring-emerald-400/70" : "ring-1 ring-inset ring-white/5"
+        className={`${box} relative overflow-hidden block ${state === "loading" ? "skeleton" : sticker ? "" : "bg-[var(--color-surface-2)]"} ${
+          claimed ? "ring-2 ring-emerald-400/70" : sticker ? "" : "ring-1 ring-inset ring-white/5"
         } transition-transform hover:scale-[1.02] active:scale-[0.98]`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
-          alt={caption ?? "Photo"}
+          alt={caption ?? (sticker ? "Sticker" : "Photo")}
           loading="lazy"
           decoding="async"
           onLoad={() => setState("loaded")}
           onError={onError}
-          className={`size-full object-cover transition-opacity duration-300 ${state === "loaded" ? "opacity-100" : "opacity-0"}`}
+          className={`size-full ${sticker ? "object-contain" : "object-cover"} transition-opacity duration-300 ${state === "loaded" ? "opacity-100" : "opacity-0"}`}
         />
       </button>
       {open && <Lightbox src={src} caption={caption ?? (timestamp ? shortTime(timestamp) : "")} onClose={close} />}
@@ -163,12 +167,31 @@ const MEDIA_ICON: Record<string, typeof File> = { video: VideoCamera, audio: Mic
 
 function MessageBubble({ m, first, isGroup }: { m: MessageRow; first: boolean; isGroup: boolean }) {
   const mine = !!m.is_from_me;
-  const Icon = m.media_type && m.media_type !== "image" ? MEDIA_ICON[m.media_type] ?? File : null;
+  const Icon =
+    m.media_type && m.media_type !== "image" && m.media_type !== "sticker" ? MEDIA_ICON[m.media_type] ?? File : null;
   const reactionGroups = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const r of m.reactions) map.set(r.emoji, [...(map.get(r.emoji) ?? []), r.reactor_name]);
     return [...map.entries()];
   }, [m.reactions]);
+
+  if (m.media_type === "sticker") {
+    return (
+      <div className={`flex ${mine ? "justify-end" : "justify-start"} ${first ? "mt-3" : "mt-1"} animate-rise`}>
+        <div className={`flex flex-col ${mine ? "items-end" : "items-start"} gap-1`}>
+          {!mine && first && isGroup && (
+            <span className="text-[13px] font-medium px-1" style={{ color: senderColor(m.sender) }}>
+              {m.sender_name}
+            </span>
+          )}
+          <ImageTile chatJid={m.chat_jid} messageId={m.id} timestamp={m.timestamp} sticker />
+          <span className="px-2 h-5 inline-flex items-center rounded-full bg-black/40 text-[11px] text-zinc-400 tabular-nums">
+            {clock(m.timestamp)}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"} ${first ? "mt-3" : "mt-0.5"} animate-rise`}>

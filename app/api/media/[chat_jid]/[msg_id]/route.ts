@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import Database from "better-sqlite3";
+import { aliasesForChatJid } from "@/lib/db";
 
 const BRIDGE_DIR = path.join(os.homedir(), "whatsapp-mcp", "whatsapp-bridge");
 const STORE_DIR = path.join(BRIDGE_DIR, "store");
@@ -88,13 +89,19 @@ export async function GET(
   const chatJid = decodeURIComponent(rawChat);
   const msgId = decodeURIComponent(rawMsg);
 
-  // Look up the message to get filename + media_type
+  // Look up the message to get filename + media_type. A DM is split across
+  // <phone>@s.whatsapp.net and <lid>@lid, so match any alias and use the
+  // chat_jid the message is actually stored under for disk + bridge lookups.
+  const aliases = aliasesForChatJid(chatJid);
   const db = new Database(MESSAGES_DB, { readonly: true, fileMustExist: true });
-  let row: { filename: string | null; media_type: string | null } | undefined;
+  let row: { chat_jid: string; filename: string | null; media_type: string | null } | undefined;
   try {
     row = db
-      .prepare("SELECT filename, media_type FROM messages WHERE id = ? AND chat_jid = ? LIMIT 1")
-      .get(msgId, chatJid) as { filename: string | null; media_type: string | null } | undefined;
+      .prepare(
+        `SELECT chat_jid, filename, media_type FROM messages
+         WHERE id = ? AND chat_jid IN (${aliases.map(() => "?").join(",")}) LIMIT 1`
+      )
+      .get(msgId, ...aliases) as typeof row;
   } finally {
     db.close();
   }
@@ -102,13 +109,14 @@ export async function GET(
   if (!row) return NextResponse.json({ error: "message not found" }, { status: 404 });
   if (!row.media_type)
     return NextResponse.json({ error: "message has no media" }, { status: 400 });
+  const storedJid = row.chat_jid;
 
   // Try cached file first
-  let filePath = await existingPathOnDisk(chatJid, row.filename);
+  let filePath = await existingPathOnDisk(storedJid, row.filename);
 
   // Fall back to triggering a download via the bridge
   if (!filePath) {
-    const result = await downloadViaBridge(chatJid, msgId);
+    const result = await downloadViaBridge(storedJid, msgId);
     if (result.kind === "expired") {
       return NextResponse.json(
         { error: "expired", message: "WhatsApp purged this media from their CDN. Older media (~30-45 days) is no longer recoverable." },

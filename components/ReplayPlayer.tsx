@@ -194,7 +194,8 @@ export default function ReplayPlayer({ messages, isGroup }: { messages: ReplayMe
           const first = newDay || prev.sender !== m.sender;
           const mine = !!m.is_from_me;
           const reactions = m.reactions.filter((r) => new Date(r.timestamp).getTime() <= playheadMs);
-          const Icon = m.media_type && m.media_type !== "image" ? MEDIA_ICON[m.media_type] ?? File : null;
+          const Icon =
+            m.media_type && m.media_type !== "image" && m.media_type !== "sticker" ? MEDIA_ICON[m.media_type] ?? File : null;
           return (
             <Fragment key={m.id}>
               {newDay && (
@@ -221,9 +222,15 @@ export default function ReplayPlayer({ messages, isGroup }: { messages: ReplayMe
                         {m.sender_name}
                       </div>
                     )}
-                    {m.media_type === "image" && (
+                    {(m.media_type === "image" || m.media_type === "sticker") && (
                       <div className="-mx-1.5 mb-1">
-                        <ImageTile chatJid={m.chat_jid} messageId={m.id} timestamp={m.timestamp} caption={m.content ?? undefined} />
+                        <ImageTile
+                          chatJid={m.chat_jid}
+                          messageId={m.id}
+                          timestamp={m.timestamp}
+                          sticker={m.media_type === "sticker"}
+                          caption={m.content ?? undefined}
+                        />
                       </div>
                     )}
                     {Icon && (
