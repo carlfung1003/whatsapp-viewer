@@ -95,7 +95,10 @@ export default function Sidebar({ chats, onCollapse }: { chats: ChatRow[]; onCol
                   <span className="truncate text-sm font-medium text-zinc-200">
                     {c.name || c.jid}
                   </span>
-                  <span className="shrink-0 text-xs text-zinc-500">{relativeTime(c.last_message_time)}</span>
+                  {/* Depends on Date.now(): server and client can straddle a minute boundary. */}
+                  <span className="shrink-0 text-xs text-zinc-500" suppressHydrationWarning>
+                    {relativeTime(c.last_message_time)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <span>{c.is_group ? "group" : "dm"}</span>
