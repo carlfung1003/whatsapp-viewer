@@ -189,7 +189,7 @@ echo 'VIEWER_PASSCODE=<pick-one>' >> .env.local   # then rebuild + restart
 tailscale serve --bg --https=443 http://127.0.0.1:8081
 ```
 
-It's then at `https://<machine>.<tailnet>.ts.net`. `proxy.ts` asks each device for the passcode once (1-year cookie); direct `localhost` requests skip the gate so scripts and tests keep working. Use `127.0.0.1`, not `localhost`, in the Serve target — the server doesn't listen on `::1`.
+It's then at `https://<machine>.<tailnet>.ts.net`. `proxy.ts` asks each device for the passcode once (1-year cookie); direct `localhost` requests skip the gate so scripts and tests keep working. Use `127.0.0.1`, not `localhost`, in the Serve target — the server doesn't listen on `::1`. To also keep the old `http://<tailnet-ip>:8081` URL working, add `tailscale serve --bg --tcp=8081 tcp://127.0.0.1:8081` (a TCP forward — Serve's `--http` mode routes by hostname and 404s on a bare IP).
 
 ### 6. (optional) Wire the MCP server into Claude Code
 

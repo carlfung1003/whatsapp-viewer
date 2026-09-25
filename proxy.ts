@@ -74,7 +74,9 @@ export async function proxy(req: NextRequest) {
     const res = NextResponse.redirect(`${proto}://${host}${next}`, 303);
     res.cookies.set(COOKIE, expected.toString("hex"), {
       httpOnly: true,
-      secure: true,
+      // Plain http is fine over the tailnet (WireGuard-encrypted), but a
+      // Secure cookie would never be stored there and login would loop.
+      secure: proto === "https",
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
