@@ -106,7 +106,7 @@ export default function AppShell({
             Chats
           </button>
         )}
-        <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-x-none">{children}</div>
       </main>
     </div>
   );

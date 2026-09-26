@@ -206,9 +206,9 @@ function MessageBubble({ m, first, isGroup }: { m: MessageRow; first: boolean; i
 
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"} ${first ? "mt-3" : "mt-0.5"} animate-rise`}>
-      <div className={`flex flex-col ${mine ? "items-end" : "items-start"} max-w-[85%] md:max-w-[68%]`}>
+      <div className={`flex flex-col ${mine ? "items-end" : "items-start"} min-w-0 max-w-[85%] md:max-w-[68%]`}>
         <div
-          className={`relative px-3 pt-2 pb-1.5 rounded-[var(--radius-bubble)] ${
+          className={`relative max-w-full min-w-0 px-3 pt-2 pb-1.5 rounded-[var(--radius-bubble)] ${
             mine
               ? `bg-[var(--color-mine)] ring-1 ring-inset ring-[var(--color-mine-line)] ${first ? "rounded-tr-[6px]" : ""}`
               : `bg-[var(--color-surface-2)] ring-1 ring-inset ring-white/5 ${first ? "rounded-tl-[6px]" : ""}`
@@ -243,14 +243,14 @@ function MessageBubble({ m, first, isGroup }: { m: MessageRow; first: boolean; i
           )}
 
           {Icon && (
-            <div className="mb-1 flex items-center gap-2 rounded-[8px] bg-black/25 px-2.5 py-2 text-[13px] text-zinc-300">
+            <div className="mb-1 flex min-w-0 items-center gap-2 rounded-[8px] bg-black/25 px-2.5 py-2 text-[13px] text-zinc-300">
               <Icon size={16} className="shrink-0 text-zinc-400" />
               <span className="truncate">{m.filename ?? m.media_type}</span>
             </div>
           )}
 
           {m.content && (
-            <span className="whitespace-pre-wrap break-words text-[15px] leading-[1.4] text-zinc-100">{m.content}</span>
+            <span className="whitespace-pre-wrap [overflow-wrap:anywhere] text-[15px] leading-[1.4] text-zinc-100">{m.content}</span>
           )}
           <span className="float-right ml-3 mt-1.5 translate-y-0.5 text-[11px] text-zinc-500 tabular-nums">
             {clock(m.timestamp)}

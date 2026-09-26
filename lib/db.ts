@@ -196,7 +196,9 @@ export function listChats(limit = 50, withPreview = true): ChatRow[] {
     .filter((r) => r.last_message_time !== null)
     // Filter junk jids that have no useful content (the literal "0" entry,
     // and the rare bare-number chat rows that are neither DMs nor groups)
-    .filter((r) => r.jid !== "0")
+    .filter((r) => r.jid !== "0" && !r.jid.startsWith("0@"))
+    // Chats WhatsApp lists but the bridge holds no messages for are just noise.
+    .filter((r) => r.message_count > 0)
     .sort((a, b) => (a.last_message_time! < b.last_message_time! ? 1 : -1))
     .slice(0, limit)
     .map((r) => {

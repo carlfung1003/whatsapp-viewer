@@ -46,7 +46,7 @@ export default async function ChatPage({ params }: { params: Promise<{ jid: stri
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgb(52_211_153/0.06),transparent)]">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgb(52_211_153/0.06),transparent)]">
         <DropsBanner drops={drops} messages={messages} chatJid={jid} />
         <MessageList messages={messages} isGroup={chat.is_group} />
       </div>
