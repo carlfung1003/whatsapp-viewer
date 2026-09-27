@@ -81,6 +81,8 @@ function loginPage(next: string, failed: boolean): NextResponse {
 export async function proxy(req: NextRequest) {
   const passcode = process.env.VIEWER_PASSCODE;
   if (!passcode || isDirectLocal(req)) return NextResponse.next();
+  // Agent briefing has its own bearer-token check (app/api/briefing).
+  if (req.nextUrl.pathname === "/api/briefing") return NextResponse.next();
 
   const expected = digest(passcode);
   const { pathname, search } = req.nextUrl;
