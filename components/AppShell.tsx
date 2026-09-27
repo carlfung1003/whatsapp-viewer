@@ -24,11 +24,13 @@ export default function AppShell({
   chats,
   initialWidth,
   initialCollapsed,
+  replyCount = 0,
   children,
 }: {
   chats: ChatRow[];
   initialWidth: number;
   initialCollapsed: boolean;
+  replyCount?: number;
   children: React.ReactNode;
 }) {
   const isHome = usePathname() === "/";
@@ -76,7 +78,7 @@ export default function AppShell({
       <div
         className={`${isHome ? "block" : "hidden"} ${collapsed ? "md:hidden" : "md:block"} relative min-h-0 h-dvh`}
       >
-        <Sidebar chats={chats} onCollapse={() => setCollapsedPersist(true)} />
+        <Sidebar chats={chats} replyCount={replyCount} onCollapse={() => setCollapsedPersist(true)} />
         <div
           onPointerDown={startDrag}
           onDoubleClick={resetWidth}

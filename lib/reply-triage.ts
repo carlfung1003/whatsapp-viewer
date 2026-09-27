@@ -21,6 +21,7 @@ export type TriageCandidate = {
   why_candidate: "dm" | "reply-to-me" | "mentioned";
   transcript: string;
   last_msg_id: string;
+  context: Array<{ who: string; mine: boolean; text: string; ts: string }>;
 };
 
 type Row = {
@@ -110,6 +111,12 @@ export function gatherCandidates(): TriageCandidate[] {
       why_candidate: why,
       transcript: ctx.map((r) => line(r, c.is_group)).join("\n"),
       last_msg_id: last.id,
+      context: ctx.slice(-4).map((r) => ({
+        who: r.is_from_me ? "You" : resolveName(r.sender),
+        mine: !!r.is_from_me,
+        text: [r.media_type ? MEDIA_WORD[r.media_type] ?? "[attachment]" : "", (r.content ?? "").trim()].filter(Boolean).join(" ").slice(0, 280),
+        ts: r.timestamp,
+      })),
     });
     if (out.length >= MAX_CANDIDATES) break;
   }

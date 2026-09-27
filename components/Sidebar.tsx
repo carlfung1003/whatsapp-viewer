@@ -55,7 +55,15 @@ function Preview({ p }: { p: LastPreview | null | undefined }) {
   );
 }
 
-export default function Sidebar({ chats, onCollapse }: { chats: ChatRow[]; onCollapse?: () => void }) {
+export default function Sidebar({
+  chats,
+  onCollapse,
+  replyCount = 0,
+}: {
+  chats: ChatRow[];
+  onCollapse?: () => void;
+  replyCount?: number;
+}) {
   const [q, setQ] = useState("");
   const pathname = usePathname();
 
@@ -131,6 +139,14 @@ export default function Sidebar({ chats, onCollapse }: { chats: ChatRow[]; onCol
               >
                 <Icon size={14} weight={active ? "fill" : "regular"} />
                 {label}
+                {href === "/needs-reply" && replyCount > 0 && (
+                  <span
+                    aria-label={`${replyCount} chats need a reply`}
+                    className="ml-0.5 min-w-5 h-5 px-1.5 grid place-items-center rounded-full bg-emerald-400 text-emerald-950 text-[11px] font-semibold tabular-nums"
+                  >
+                    {replyCount}
+                  </span>
+                )}
               </Link>
             );
           })}

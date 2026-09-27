@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { candidatesKey, gatherCandidates, type TriageCandidate } from "@/lib/reply-triage";
-import { getTopicCache, setTopicCache } from "@/lib/state-db";
+import { getTopicCache, getTriageDismissals, setTopicCache } from "@/lib/state-db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,8 @@ const Verdict = z.object({
 });
 const TriageOutput = z.object({ items: z.array(Verdict) });
 
-export type TriageItem = z.infer<typeof Verdict> & Omit<TriageCandidate, "transcript" | "id">;
+export type TriageItem = z.infer<typeof Verdict> &
+  Omit<TriageCandidate, "transcript" | "id"> & { dismissed?: boolean };
 export type TriageResponse = {
   items: TriageItem[];
   generated_at: string;
@@ -26,6 +27,12 @@ export type TriageResponse = {
   cached: boolean;
   candidates: number;
 };
+
+// "Done" marks apply at read time, so cached analyses respect them too.
+function withDismissals(p: TriageResponse): TriageResponse {
+  const d = getTriageDismissals();
+  return { ...p, items: p.items.map((it) => ({ ...it, dismissed: d.get(it.chat_jid) === it.last_msg_id })) };
+}
 
 const SYSTEM = `You triage a person's WhatsApp inbox. For each chat, decide whether the user (shown as "Me") actually owes a reply, and how urgently.
 
@@ -64,7 +71,7 @@ export async function POST(req: Request) {
   const key = candidatesKey(cands);
   if (!body.refresh) {
     const hit = getTopicCache(key, 12) as TriageResponse | null;
-    if (hit) return NextResponse.json({ ...hit, cached: true });
+    if (hit) return NextResponse.json(withDismissals({ ...hit, cached: true }));
   }
 
   const input = cands
@@ -115,7 +122,7 @@ export async function POST(req: Request) {
       candidates: cands.length,
     };
     setTopicCache(key, payload);
-    return NextResponse.json(payload);
+    return NextResponse.json(withDismissals(payload));
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) {
       return NextResponse.json({ error: "Rate limited by Anthropic, try again shortly" }, { status: 429 });

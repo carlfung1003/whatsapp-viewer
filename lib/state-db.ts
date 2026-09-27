@@ -28,6 +28,11 @@ function stateDb(): Database.Database {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (message_id, chat_jid)
     );
+    CREATE TABLE IF NOT EXISTS triage_dismiss (
+      chat_jid TEXT PRIMARY KEY,
+      last_msg_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS topic_cache (
       cache_key TEXT PRIMARY KEY,
       payload TEXT NOT NULL,
@@ -131,4 +136,45 @@ export function setClaimState(
       next.claimer_override,
       next.notes,
     );
+}
+
+
+// --- Reply triage: "done" marks. A mark only hides a chat while its latest
+// message is still the one I dismissed; anything new brings it back.
+
+export function getTriageDismissals(): Map<string, string> {
+  const rows = stateDb().prepare("SELECT chat_jid, last_msg_id FROM triage_dismiss").all() as Array<{
+    chat_jid: string;
+    last_msg_id: string;
+  }>;
+  return new Map(rows.map((r) => [r.chat_jid, r.last_msg_id]));
+}
+
+export function setTriageDismissal(chatJid: string, lastMsgId: string | null): void {
+  if (lastMsgId === null) {
+    stateDb().prepare("DELETE FROM triage_dismiss WHERE chat_jid = ?").run(chatJid);
+    return;
+  }
+  stateDb()
+    .prepare(
+      `INSERT INTO triage_dismiss (chat_jid, last_msg_id, created_at) VALUES (?, ?, datetime('now'))
+       ON CONFLICT(chat_jid) DO UPDATE SET last_msg_id = excluded.last_msg_id, created_at = excluded.created_at`
+    )
+    .run(chatJid, lastMsgId);
+}
+
+/** Most recent cached triage result (any key), for cheap badges. */
+export function getLatestTriage(): unknown | null {
+  const row = stateDb()
+    .prepare(
+      `SELECT payload FROM topic_cache WHERE cache_key LIKE 'triage-%'
+       ORDER BY datetime(created_at) DESC LIMIT 1`
+    )
+    .get() as { payload: string } | undefined;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
 }

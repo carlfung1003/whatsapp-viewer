@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowClockwise, CaretDown, Check, Copy, Sparkle } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowClockwise, ArrowCounterClockwise, At, CaretDown, Check, CheckCircle, Copy, Sparkle } from "@phosphor-icons/react";
 import type { TriageItem, TriageResponse } from "@/app/api/reply-triage/route";
 import { Avatar } from "@/components/ui";
 
@@ -63,8 +63,28 @@ function Draft({ text }: { text: string }) {
   );
 }
 
-function Card({ it }: { it: TriageItem }) {
+function Context({ it }: { it: TriageItem }) {
+  return (
+    <div className="mt-3 flex flex-col gap-1.5 rounded-[12px] bg-black/20 p-3">
+      {it.context.map((m, i) => (
+        <div key={i} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
+          <div
+            className={`max-w-[85%] min-w-0 px-3 py-1.5 rounded-[14px] text-[14px] leading-[1.4] [overflow-wrap:anywhere] ${
+              m.mine ? "bg-[var(--color-mine)] text-zinc-100" : "bg-[var(--color-surface-2)] text-zinc-200"
+            }`}
+          >
+            {!m.mine && it.is_group && <div className="text-[12px] font-medium text-zinc-400">{m.who}</div>}
+            {m.text || <span className="text-zinc-500">(empty)</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Card({ it, onDone }: { it: TriageItem; onDone: (it: TriageItem) => void }) {
   const p = PRIORITY[it.priority];
+  const [showCtx, setShowCtx] = useState(false);
   return (
     <li className="rounded-[14px] bg-[var(--color-surface)] ring-1 ring-inset ring-white/5 p-4 animate-rise">
       <div className="flex items-start gap-3">
@@ -75,6 +95,12 @@ function Card({ it }: { it: TriageItem }) {
               {it.name}
             </Link>
             <span className={`h-6 px-2 inline-flex items-center rounded-full text-[12px] font-medium ${p.cls}`}>{p.label}</span>
+            {it.is_group && (
+              <span className="h-6 px-2 inline-flex items-center gap-1 rounded-full text-[12px] bg-white/5 text-zinc-400">
+                {it.why_candidate === "reply-to-me" ? <ArrowBendUpLeft size={12} /> : <At size={12} />}
+                {it.why_candidate === "reply-to-me" ? "replied to you" : "mentioned you"}
+              </span>
+            )}
             <span className="ml-auto text-xs text-zinc-500 tabular-nums">waiting {ago(it.hours_waiting)}</span>
           </div>
           <p className="mt-1 text-[14px] text-zinc-300">{it.reason}</p>
@@ -83,8 +109,28 @@ function Card({ it }: { it: TriageItem }) {
           )}
         </div>
       </div>
+      {showCtx && it.context?.length > 0 && <Context it={it} />}
       {it.suggested_reply && <Draft text={it.suggested_reply} />}
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        {it.context?.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowCtx((v) => !v)}
+            className="mr-auto inline-flex items-center gap-1 h-8 px-2 rounded-full text-[13px] text-zinc-400 hover:text-zinc-100"
+          >
+            <CaretDown size={13} className={`transition-transform ${showCtx ? "rotate-180" : ""}`} />
+            {showCtx ? "Hide conversation" : "Show conversation"}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onDone(it)}
+          title="Hide until they send something new"
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[13px] text-emerald-200 bg-emerald-400/10 hover:bg-emerald-400/20 active:scale-[0.97] transition"
+        >
+          <CheckCircle size={14} />
+          Done
+        </button>
         <Link
           href={`/chat/${encodeURIComponent(it.chat_jid)}`}
           className="inline-flex items-center h-8 px-3 rounded-full text-[13px] text-zinc-300 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)]"
@@ -101,6 +147,25 @@ export default function ReplyTriage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRest, setShowRest] = useState(false);
+  const [showDone, setShowDone] = useState(false);
+
+  // Optimistic: flip locally, persist in the background, roll back on failure.
+  const setDismissed = useCallback(async (it: TriageItem, dismissed: boolean) => {
+    const flip = (v: boolean) =>
+      setData((d) => (d ? { ...d, items: d.items.map((x) => (x.chat_jid === it.chat_jid ? { ...x, dismissed: v } : x)) } : d));
+    flip(dismissed);
+    try {
+      const res = await fetch("/api/reply-triage/dismiss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_jid: it.chat_jid, last_msg_id: it.last_msg_id, undo: !dismissed }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      flip(!dismissed);
+      setError("Couldn't save that. Try again.");
+    }
+  }, []);
 
   const run = useCallback(async (refresh: boolean) => {
     setLoading(true);
@@ -126,8 +191,9 @@ export default function ReplyTriage() {
     run(false);
   }, [run]);
 
-  const needs = data?.items.filter((i) => i.needs_reply) ?? [];
-  const rest = data?.items.filter((i) => !i.needs_reply) ?? [];
+  const needs = data?.items.filter((i) => i.needs_reply && !i.dismissed) ?? [];
+  const rest = data?.items.filter((i) => !i.needs_reply && !i.dismissed) ?? [];
+  const done = data?.items.filter((i) => i.dismissed) ?? [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -137,7 +203,7 @@ export default function ReplyTriage() {
           {loading
             ? "Claude is reading your waiting chats…"
             : data
-              ? `${needs.length} of ${data.candidates} waiting chats need you. ${data.cached ? "Cached" : "Analysed"} ${new Date(data.generated_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}.`
+              ? `${needs.length} of ${data.candidates} waiting chats need you${done.length ? `, ${done.length} done` : ""}. ${data.cached ? "Cached" : "Analysed"} ${new Date(data.generated_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}.`
               : ""}
         </span>
         <span className="text-zinc-600">iLuxury groups excluded</span>
@@ -174,7 +240,7 @@ export default function ReplyTriage() {
       {needs.length > 0 && (
         <ul className={`flex flex-col gap-3 transition-opacity ${loading ? "opacity-60" : ""}`}>
           {needs.map((it) => (
-            <Card key={it.chat_jid} it={it} />
+            <Card key={it.chat_jid} it={it} onDone={(x) => setDismissed(x, true)} />
           ))}
         </ul>
       )}
@@ -203,6 +269,40 @@ export default function ReplyTriage() {
                       <div className="text-[13px] text-zinc-500 truncate">{it.reason}</div>
                     </div>
                   </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {done.length > 0 && (
+        <section>
+          <button
+            type="button"
+            onClick={() => setShowDone((v) => !v)}
+            className="inline-flex items-center gap-1.5 text-[13px] text-zinc-400 hover:text-zinc-200"
+          >
+            <CaretDown size={14} className={`transition-transform ${showDone ? "rotate-180" : ""}`} />
+            {done.length} marked done
+          </button>
+          {showDone && (
+            <ul className="mt-2 flex flex-col">
+              {done.map((it) => (
+                <li key={it.chat_jid} className="flex items-center gap-3 px-2 py-2.5">
+                  <Avatar name={it.name} seed={it.chat_jid} group={it.is_group} size={32} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14px] text-zinc-300 truncate">{it.name}</div>
+                    <div className="text-[13px] text-zinc-500 truncate">Hidden until they send something new</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDismissed(it, false)}
+                    className="inline-flex items-center gap-1 h-8 px-3 rounded-full text-[13px] text-zinc-300 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)]"
+                  >
+                    <ArrowCounterClockwise size={13} />
+                    Undo
+                  </button>
                 </li>
               ))}
             </ul>
