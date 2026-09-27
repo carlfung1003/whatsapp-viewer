@@ -23,6 +23,18 @@ export function whatsappDb(): Database.Database {
   return _whatsappDb;
 }
 
+/** My own sender ids (phone + LID) and display name, for "is this about me" checks. */
+export function ownIdentity(): { ids: Set<string>; name: string | null } {
+  let name: string | null = null;
+  try {
+    const d = whatsappDb().prepare("SELECT push_name FROM whatsmeow_device LIMIT 1").get() as { push_name?: string } | undefined;
+    name = d?.push_name?.trim() || null;
+  } catch {
+    /* ignore */
+  }
+  return { ids: ownLids(), name };
+}
+
 function ownLids(): Set<string> {
   if (_ownLidCache) return _ownLidCache;
   const set = new Set<string>();

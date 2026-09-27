@@ -14,7 +14,7 @@ const STATIC_ROUTES = [
   "/drops",
   "/sql",
   "/stats",
-  "/needs-reply",
+  "/needs-reply?view=time", // AI view calls Claude; keep smoke runs free
   "/contacts",
   "/insights",
   "/insights/reply-latency",
